@@ -44,3 +44,74 @@ fun resolvePosterUrl(serverUrl: String, posterReference: String?): String? {
     if (base.isBlank()) return null
     return "$base/${reference.trimStart('/')}"
 }
+
+
+/** A watched file marker returned by POST /viewed. TorrServer file indexes start at 1. */
+data class TorrServeViewedMark(
+    val hash: String,
+    val fileIndex: Int,
+    val timecode: Double,
+)
+
+data class TorrServeViewedState(
+    val timecode: Double,
+    /** Time when PolyaTV first noticed this mark or observed its timecode change. */
+    val lastObservedAt: Long,
+)
+
+data class TorrServeHistoryEntry(
+    val hash: String,
+    val fileIndices: List<Int>,
+    val timecodes: Map<Int, Double>,
+    val lastObservedAt: Long,
+)
+
+/**
+ * The Viewed API does not provide a wall-clock watch timestamp. We store the first observation
+ * locally, and refresh it only when a tracked timecode changes materially. This is an ordering
+ * hint, not a claim of exact playback time.
+ */
+fun mergeTorrServeViewedState(
+    previous: Map<String, TorrServeViewedState>,
+    marks: List<TorrServeViewedMark>,
+    now: Long,
+): Map<String, TorrServeViewedState> {
+    val next = LinkedHashMap<String, TorrServeViewedState>()
+    marks.forEach { mark ->
+        val hash = mark.hash.trim().lowercase()
+        if (hash.isBlank() || mark.fileIndex < 1) return@forEach
+        val key = "$hash:${mark.fileIndex}"
+        val old = previous[key]
+        val changed = old == null || kotlin.math.abs(mark.timecode - old.timecode) > 0.5
+        next[key] = TorrServeViewedState(
+            timecode = mark.timecode.coerceAtLeast(0.0),
+            lastObservedAt = if (changed || old.lastObservedAt <= 0L) now else old.lastObservedAt,
+        )
+    }
+    return next
+}
+
+fun buildTorrServeHistory(
+    marks: List<TorrServeViewedMark>,
+    states: Map<String, TorrServeViewedState>,
+): List<TorrServeHistoryEntry> {
+    return marks
+        .asSequence()
+        .map { it.copy(hash = it.hash.trim().lowercase()) }
+        .filter { it.hash.isNotBlank() && it.fileIndex >= 1 }
+        .groupBy { it.hash }
+        .map { (hash, torrentMarks) ->
+            val unique = torrentMarks.distinctBy { it.fileIndex }
+            val timecodes = unique.associate { it.fileIndex to it.timecode }
+            val observedAt = unique.maxOfOrNull { mark ->
+                states["$hash:${mark.fileIndex}"]?.lastObservedAt ?: 0L
+            } ?: 0L
+            TorrServeHistoryEntry(
+                hash = hash,
+                fileIndices = unique.map { it.fileIndex }.sorted(),
+                timecodes = timecodes,
+                lastObservedAt = observedAt,
+            )
+        }
+        .sortedByDescending { it.lastObservedAt }
+}

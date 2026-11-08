@@ -51,6 +51,7 @@ private enum class HomePage { HOME, SETTINGS }
 @Composable
 fun PolyaHomeScreen(
     items: List<MediaContent>,
+    historyItems: List<MediaContent>,
     serverUrl: String,
     connectionMessage: String,
     isRefreshing: Boolean,
@@ -77,7 +78,7 @@ fun PolyaHomeScreen(
             }
             when (page) {
                 HomePage.HOME -> HomeContent(
-                    items, connectionMessage, isRefreshing, onRefresh,
+                    items, historyItems, connectionMessage, isRefreshing, onRefresh,
                     { page = HomePage.SETTINGS }, onItemSelected,
                 )
                 HomePage.SETTINGS -> SettingsContent(
@@ -92,6 +93,7 @@ fun PolyaHomeScreen(
 @Composable
 private fun HomeContent(
     items: List<MediaContent>,
+    historyItems: List<MediaContent>,
     connectionMessage: String,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -130,7 +132,7 @@ private fun HomeContent(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(
-                            if (items.isNotEmpty()) "ПРОДОЛЖИТЬ СМОТРЕТЬ" else "ВАШ ДОМАШНИЙ КИНОТЕАТР",
+                            if (items.isNotEmpty()) "МЕДИАТЕКА TORRSERVE" else "ВАШ ДОМАШНИЙ КИНОТЕАТР",
                             color = Color(0xFF70D6C2), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
                         )
                         Text(
@@ -143,6 +145,23 @@ private fun HomeContent(
                             else "Подключите TorrServe, чтобы загрузить вашу медиатеку",
                             color = Color(0xFFD5DEE7), fontSize = 16.sp,
                         )
+                    }
+                }
+            }
+        }
+        if (historyItems.isNotEmpty()) {
+            item(key = "history-title") {
+                Text("Недавно отмеченные просмотры", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+            }
+            item(key = "history-shelf") {
+                val firstHistoryFocus = remember { FocusRequester() }
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().focusRestorer(firstHistoryFocus).focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                ) {
+                    itemsIndexed(historyItems, key = { _, item -> "history:${item.id}" }) { index, item ->
+                        MediaCard(item, if (index == 0) firstHistoryFocus else null) { onItemSelected(item) }
                     }
                 }
             }

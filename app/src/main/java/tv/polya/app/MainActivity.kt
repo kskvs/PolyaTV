@@ -12,6 +12,7 @@ import tv.polya.core.model.MediaContent
 import tv.polya.feature.home.PolyaHomeScreen
 import tv.polya.integration.torrserve.TorrServeChooserLauncher
 import tv.polya.integration.torrserve.TorrServeEntry
+import tv.polya.integration.torrserve.TorrServeHistoryEntry
 import tv.polya.integration.torrserve.TorrServeRepository
 import tv.polya.integration.torrserve.resolvePosterUrl
 
@@ -19,6 +20,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var torrServe: TorrServeRepository
     private val serverUrl = mutableStateOf("")
     private val items = mutableStateOf<List<MediaContent>>(emptyList())
+    private val historyItems = mutableStateOf<List<MediaContent>>(emptyList())
     private val status = mutableStateOf("Введите адрес TorrServe в настройках и проверьте соединение.")
     private val isRefreshing = mutableStateOf(false)
     private val chooserLauncher = TorrServeChooserLauncher()
@@ -27,11 +29,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         torrServe = TorrServeRepository(applicationContext)
         serverUrl.value = torrServe.serverUrl()
-        items.value = torrServe.cachedEntries().map(TorrServeEntry::toMediaContent)
+        items.value = torrServe.cachedEntries().map { it.toMediaContent(serverUrl.value) }
+        historyItems.value = mapHistory(torrServe.cachedHistory(), torrServe.cachedEntries(), serverUrl.value)
 
         setContent {
             PolyaHomeScreen(
                 items = items.value,
+                historyItems = historyItems.value,
                 serverUrl = serverUrl.value,
                 connectionMessage = status.value,
                 isRefreshing = isRefreshing.value,
@@ -62,7 +66,8 @@ class MainActivity : ComponentActivity() {
             isRefreshing.value = true
             try {
                 val result = torrServe.refresh()
-                items.value = result.entries.map(TorrServeEntry::toMediaContent)
+                items.value = result.entries.map { it.toMediaContent(serverUrl.value) }
+                historyItems.value = mapHistory(result.history, result.entries, serverUrl.value)
                 status.value = result.message
             } finally {
                 isRefreshing.value = false
@@ -71,11 +76,22 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun TorrServeEntry.toMediaContent() = MediaContent(
+private fun mapHistory(
+    history: List<TorrServeHistoryEntry>,
+    entries: List<TorrServeEntry>,
+    baseUrl: String,
+): List<MediaContent> {
+    val byHash = entries.associateBy { it.hash }
+    return history.mapNotNull { viewed ->
+        byHash[viewed.hash]?.toMediaContent(baseUrl)
+    }
+}
+
+private fun TorrServeEntry.toMediaContent(baseUrl: String) = MediaContent(
     id = "torrserve:$hash",
     title = title,
     sourceId = "torrserve",
     sourceContentId = hash,
-    posterUrl = resolvePosterUrl(serverUrl, poster),
+    posterUrl = resolvePosterUrl(baseUrl, poster),
     contentType = ContentType.UNKNOWN,
 )
