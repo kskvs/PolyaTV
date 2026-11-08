@@ -32,11 +32,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
@@ -109,13 +111,24 @@ private fun HomeContent(
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1.015f),
                 colors = ClickableSurfaceDefaults.colors(containerColor = Color(0xFF1B2A37), focusedContainerColor = Color(0xFF263C4B)),
             ) {
-                Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.horizontalGradient(listOf(Color(0xFF183D43), Color(0xFF1B2939), Color(0xFF111720))),
-                    ).padding(horizontal = 38.dp, vertical = 28.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.fillMaxSize()) {
+                    items.firstOrNull()?.posterUrl?.let { poster ->
+                        AsyncImage(
+                            model = poster,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.horizontalGradient(listOf(Color(0xE0183D43), Color(0xCC1B2939), Color(0x88111720))),
+                        ),
+                    )
+                    Column(
+                        Modifier.align(Alignment.CenterStart).padding(horizontal = 38.dp, vertical = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
                         Text(
                             if (items.isNotEmpty()) "ПРОДОЛЖИТЬ СМОТРЕТЬ" else "ВАШ ДОМАШНИЙ КИНОТЕАТР",
                             color = Color(0xFF70D6C2), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
@@ -280,7 +293,17 @@ private fun MediaCard(item: MediaContent, focusRequester: FocusRequester?, onCli
                 ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(item.title.take(1).uppercase(), color = Color(0xFFDAE8E8), fontSize = 42.sp, fontWeight = FontWeight.Bold)
+                val poster = item.posterUrl
+                if (!poster.isNullOrBlank()) {
+                    AsyncImage(
+                        model = poster,
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Text(item.title.take(1).uppercase(), color = Color(0xFFDAE8E8), fontSize = 42.sp, fontWeight = FontWeight.Bold)
+                }
             }
             Text(item.title, color = Color.White, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp))
         }
