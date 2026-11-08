@@ -1,5 +1,7 @@
 package tv.polya.feature.home
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -14,12 +16,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,8 +36,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -527,6 +533,17 @@ private fun TvAppCard(app: TvAppShortcut, focusRequester: FocusRequester?, onCli
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
+            val context = LocalContext.current
+            val appIcon = remember(app.packageName, context) {
+                runCatching {
+                    val drawable = context.packageManager.getApplicationIcon(app.packageName)
+                    val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bitmap)
+                    drawable.setBounds(0, 0, 96, 96)
+                    drawable.draw(canvas)
+                    bitmap.asImageBitmap()
+                }.getOrNull()
+            }
             Box(
                 modifier = Modifier.width(58.dp).height(58.dp).background(
                     Brush.linearGradient(listOf(Color(0xFF3A6265), Color(0xFF253747))),
@@ -534,7 +551,16 @@ private fun TvAppCard(app: TvAppShortcut, focusRequester: FocusRequester?, onCli
                 ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(app.label.take(1).uppercase(), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                if (appIcon != null) {
+                    Image(
+                        bitmap = appIcon,
+                        contentDescription = app.label,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(7.dp),
+                    )
+                } else {
+                    Text(app.label.take(1).uppercase(), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                }
             }
             Text(
                 app.label,
