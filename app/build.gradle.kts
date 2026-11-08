@@ -23,6 +23,7 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":integration:torrserve"))
     implementation(project(":integration:lampa"))
+    implementation(project(":integration:num"))
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")

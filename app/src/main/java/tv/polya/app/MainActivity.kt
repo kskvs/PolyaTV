@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
@@ -16,6 +17,7 @@ import tv.polya.core.model.MediaSearchResult
 import tv.polya.feature.home.PolyaHomeScreen
 import tv.polya.feature.home.TvAppShortcut
 import tv.polya.integration.lampa.LampaSearchAdapter
+import tv.polya.integration.num.NumTvCatalogAdapter
 import tv.polya.integration.torrserve.TorrServeChooserLauncher
 import tv.polya.integration.torrserve.TorrServeEntry
 import tv.polya.integration.torrserve.TorrServeHistoryEntry
@@ -25,6 +27,7 @@ import tv.polya.integration.torrserve.resolvePosterUrl
 class MainActivity : ComponentActivity() {
     private lateinit var torrServe: TorrServeRepository
     private lateinit var lampaSearch: LampaSearchAdapter
+    private lateinit var numCatalog: NumTvCatalogAdapter
     private val serverUrl = mutableStateOf("")
     private val items = mutableStateOf<List<MediaContent>>(emptyList())
     private val historyItems = mutableStateOf<List<MediaContent>>(emptyList())
@@ -36,12 +39,19 @@ class MainActivity : ComponentActivity() {
     private val status = mutableStateOf("Введите адрес TorrServe в настройках и проверьте соединение.")
     private val isRefreshing = mutableStateOf(false)
     private val installedApps = mutableStateOf<List<TvAppShortcut>>(emptyList())
+    private val numPermissionGranted = mutableStateOf(false)
+    private val requestNumPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        numPermissionGranted.value = granted
+        if (granted && searchQuery.value.isNotBlank()) searchAllSources()
+    }
     private val chooserLauncher = TorrServeChooserLauncher()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         torrServe = TorrServeRepository(applicationContext)
         lampaSearch = LampaSearchAdapter(applicationContext)
+        numCatalog = NumTvCatalogAdapter(applicationContext)
+        numPermissionGranted.value = numCatalog.hasReadPermission()
         serverUrl.value = torrServe.serverUrl()
         systemSearchQuery.value = intent.getStringExtra(EXTRA_SYSTEM_SEARCH_QUERY).orEmpty()
         searchQuery.value = systemSearchQuery.value
@@ -58,6 +68,8 @@ class MainActivity : ComponentActivity() {
                 searchQuery = searchQuery.value,
                 initialSearchQuery = systemSearchQuery.value,
                 searchResults = searchResults.value,
+                numPermissionGranted = numPermissionGranted.value,
+                onRequestNumPermission = ::requestNumSearchPermission,
                 searchStatus = searchStatus.value,
                 isSearching = isSearching.value,
                 onSearchQueryChange = { searchQuery.value = it },
@@ -137,7 +149,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::torrServe.isInitialized) installedApps.value = discoverTvApps()
+        if (::torrServe.isInitialized) {
+            installedApps.value = discoverTvApps()
+            numPermissionGranted.value = numCatalog.hasReadPermission()
+        }
     }
 
     private fun searchAllSources() {
@@ -155,13 +170,16 @@ class MainActivity : ComponentActivity() {
             try {
                 val torrServeTask = async { runCatching { torrServe.searchTorrents(query) } }
                 val lampaTask = async { runCatching { lampaSearch.search(query) } }
+                val numTask = async { runCatching { numCatalog.search(query) } }
 
                 val torrentResult = torrServeTask.await()
                 val lampaResult = lampaTask.await()
+                val numResult = numTask.await()
                 val torrentMatches = torrentResult.getOrDefault(emptyList())
                 val lampaMatches = lampaResult.getOrDefault(emptyList())
+                val numMatches = numResult.getOrDefault(emptyList())
                 searchResults.value = tv.polya.core.model.deduplicateMediaSearchResults(
-                    torrentMatches + lampaMatches,
+                    torrentMatches + lampaMatches + numMatches,
                 )
 
                 val torrentStatus = when {
@@ -173,11 +191,16 @@ class MainActivity : ComponentActivity() {
                     lampaResult.isSuccess -> "Lampa: ${lampaMatches.size}"
                     else -> "Lampa: ошибка"
                 }
+                val numStatus = when {
+                    !numPermissionGranted.value -> "NUM: нужно разрешение TV listings"
+                    numResult.isSuccess -> "NUM: ${numMatches.size}"
+                    else -> "NUM: ошибка чтения рекомендаций"
+                }
                 val total = searchResults.value.size
                 searchStatus.value = if (total == 0) {
-                    "Ничего не найдено. $torrentStatus · $lampaStatus"
+                    "Ничего не найдено. $torrentStatus · $lampaStatus · $numStatus"
                 } else {
-                    "Найдено: $total · $torrentStatus · $lampaStatus"
+                    "Найдено: $total · $torrentStatus · $lampaStatus · $numStatus"
                 }
             } finally {
                 isSearching.value = false
@@ -186,6 +209,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openSearchResult(result: MediaSearchResult) {
+        if (result.sourceId == "num") {
+            if (numCatalog.open(this, result)) {
+                searchStatus.value = "Открыта рекомендация NUM."
+            } else {
+                searchStatus.value = "Не удалось открыть карточку NUM. Проверьте приложение и разрешение системных рекомендаций."
+            }
+            return
+        }
         if (result.sourceId == "lampa") {
             if (lampaSearch.open(this, result)) {
                 searchStatus.value = "Открыта карточка в Lampa. Продолжите выбор торрента в приложении."
@@ -208,6 +239,15 @@ class MainActivity : ComponentActivity() {
             } catch (error: Exception) {
                 searchStatus.value = "Не удалось добавить раздачу: ${error.message ?: error.javaClass.simpleName}"
             }
+        }
+    }
+
+    private fun requestNumSearchPermission() {
+        if (numCatalog.hasReadPermission()) {
+            numPermissionGranted.value = true
+            searchAllSources()
+        } else {
+            requestNumPermission.launch("android.permission.READ_TV_LISTINGS")
         }
     }
 

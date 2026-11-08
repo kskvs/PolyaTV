@@ -2,7 +2,9 @@
 
 ## Phase 0 — Technical validation
 - [ ] Зафиксировать версию TorrServe MatriX и проверить запуск штатного chooser.
-- [ ] Проверить API/контракты TorrServe, Lampa и NUM.
+- [x] Проверить API/контракты TorrServe и публичный search-provider Lampa.
+- [x] Добавить capability-based NUM adapter через TV Provider.
+- [ ] Проверить, публикует ли NUM searchable rows на Philips 50PUS8057/60.
 - [ ] Проверить доступность истории и прогресса, включая Android MediaSession.
 - [ ] Проверить API, лицензии и attribution источников постеров.
 - [x] Реализовать Android TV Search Provider по публичному Search API.

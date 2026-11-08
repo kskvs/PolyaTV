@@ -34,6 +34,12 @@ MatriX.134 client uses GET `/search?query=...` and returns tracker results with 
 Перед включением любого адаптера определить установленный вариант приложения, проверить exported provider/activity и проверить полный путь до chooser MatriX 134 на реальном ТВ.
 
 
+## NUM Android TV recommendations
+
+The NUM adapter uses Android's public TV Provider contract, not NUM's private files or database. It requests the dangerous runtime permission `android.permission.READ_TV_LISTINGS` only after the user chooses “Разрешить доступ к рекомендациям NUM” in PolyaTV settings. It queries `TvContract.PreviewPrograms` without a SQL selection, then filters rows by owning package `ru.yourok.num` and `COLUMN_SEARCHABLE=1`. Each row is accepted only when its `intent_uri` resolves back to the NUM package; selecting a result launches that published intent. Relative or private poster URIs are not copied into the external UI.
+
+This adapter is **capability-based**: if NUM does not publish searchable preview-program rows, the adapter correctly returns no results. Its real presence and result count on Philips 50PUS8057/60 still needs device testing. Android restricts third-party reads to searchable rows and the permission; the signature/privileged all-EPG permission is not requested.
+
 ## Unified feed
 Дедуплицировать произведения, сохраняя все найденные источники; выбирать метаданные и изображения по правилам качества; оставлять возможность открыть элемент через нужный источник; переживать частичный отказ адаптеров.
 

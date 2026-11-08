@@ -30,6 +30,7 @@ data class MediaSearchResult(
     val posterUrl: String? = null,
     val description: String? = null,
     val launchType: String = "",
+    val sourceLaunchUri: String? = null,
 )
 
 /** Deduplicate within a provider without collapsing distinct source launch paths. */

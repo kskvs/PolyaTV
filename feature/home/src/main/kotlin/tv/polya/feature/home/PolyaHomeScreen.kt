@@ -61,6 +61,8 @@ fun PolyaHomeScreen(
     searchQuery: String,
     initialSearchQuery: String,
     searchResults: List<MediaSearchResult>,
+    numPermissionGranted: Boolean,
+    onRequestNumPermission: () -> Unit,
     searchStatus: String,
     isSearching: Boolean,
     onSearchQueryChange: (String) -> Unit,
@@ -114,7 +116,7 @@ fun PolyaHomeScreen(
                 )
                 HomePage.SETTINGS -> SettingsContent(
                     serverUrl, connectionMessage, isRefreshing, onServerUrlChange,
-                    onSaveAndRefresh, onRefresh,
+                    onSaveAndRefresh, onRefresh, numPermissionGranted, onRequestNumPermission,
                 )
             }
         }
@@ -383,6 +385,8 @@ private fun SettingsContent(
     onServerUrlChange: (String) -> Unit,
     onSaveAndRefresh: () -> Unit,
     onRefresh: () -> Unit,
+    numPermissionGranted: Boolean,
+    onRequestNumPermission: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(top = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text("Подключения", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
@@ -414,7 +418,21 @@ private fun SettingsContent(
             ActionSurface("Проверить ещё раз", onRefresh, enabled = !isRefreshing)
         }
         Text(connectionMessage, color = Color(0xFFB8C4D0), fontSize = 14.sp, maxLines = 3)
-        Text("Lampa и NUM будут добавлены отдельными независимыми адаптерами.", color = Color(0xFF7F8B98), fontSize = 13.sp)
+        Text("NUM · системные рекомендации Android TV", color = Color(0xFF70D6C2), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            if (numPermissionGranted) {
+                "Разрешение выдано. PolyaTV будет читать только опубликованные NUM карточки с пометкой «доступно для поиска»."
+            } else {
+                "Для поиска по карточкам NUM нужно разрешить чтение общедоступных системных рекомендаций Android TV. Приватные данные NUM не читаются."
+            },
+            color = Color(0xFF9BA8B6), fontSize = 13.sp,
+        )
+        ActionSurface(
+            if (numPermissionGranted) "Доступ к рекомендациям NUM включён" else "Разрешить доступ к рекомендациям NUM",
+            onRequestNumPermission,
+            enabled = !numPermissionGranted,
+        )
+        Text("Lampa используется через её открытый поисковый provider.", color = Color(0xFF7F8B98), fontSize = 13.sp)
     }
 }
 
