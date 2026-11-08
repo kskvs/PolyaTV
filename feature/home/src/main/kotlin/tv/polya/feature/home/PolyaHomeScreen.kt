@@ -280,7 +280,7 @@ private fun SearchContent(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 28.dp),
         ) {
-            itemsIndexed(results, key = { index, item -> item.hash.ifBlank { item.magnet.ifBlank { "result-$index" } } }) { _, result ->
+            itemsIndexed(results, key = { index, item -> item.providerContentId.ifBlank { item.magnetUri.ifBlank { "result-$index" } } }) { _, result ->
                 SearchResultCard(result, onClick = { onResultSelected(result) })
             }
         }
@@ -317,9 +317,9 @@ private fun SearchResultCard(result: MediaSearchResult, onClick: () -> Unit) {
                 Text(result.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val details = listOfNotNull(
                     result.year.takeIf { it > 0 }?.toString(),
-                    result.size.takeIf { it.isNotBlank() },
-                    result.tracker.takeIf { it.isNotBlank() },
-                    result.seeders.takeIf { it >= 0 }?.let { "сидов: $it" },
+                    result.sizeLabel.takeIf { it.isNotBlank() },
+                    result.providerLabel.takeIf { it.isNotBlank() },
+                    result.seedCount.takeIf { it > 0 }?.let { "сидов: $it" },
                 ).joinToString(" · ")
                 Text(details, color = Color(0xFF9BA8B6), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

@@ -121,15 +121,3 @@ fun buildTorrServeHistory(
         }
         .sortedByDescending { it.lastObservedAt }
 }
-
-
-/** One external index result returned by the MatriX /search endpoint. */
-
-/** Deduplicate tracker search matches while preserving the provider result order. */
-fun deduplicateTorrServeSearchResults(
-    results: List<tv.polya.core.model.MediaSearchResult>,
-): List<TorrServeSearchResult> = results
-    .asSequence()
-    .filter { it.title.isNotBlank() && it.magnetUri.isNotBlank() }
-    .distinctBy { it.providerContentId.trim().lowercase().ifBlank { it.magnetUri.trim() } }
-    .toList()

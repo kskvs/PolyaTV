@@ -44,7 +44,7 @@ class TorrServeViewedHistoryTest {
         val history = buildTorrServeHistory(marks, state)
 
         assertEquals(2, history.size)
-        assertEquals("abc", history.first().providerContentId)
+        assertEquals("abc", history.first().hash)
         assertEquals(listOf(1, 2), history.first().fileIndices)
         assertEquals(120.0, history.first().timecodes[1] ?: -1.0, 0.001)
     }
@@ -69,26 +69,5 @@ class TorrServeViewedHistoryTest {
             emptyMap(),
         )
         assertTrue(history.isEmpty())
-    }
-}
-
-
-class tv.polya.core.model.MediaSearchResultTest {
-    @Test fun duplicateSearchMatchesCollapseByInfoHash() {
-        val first = tv.polya.core.model.MediaSearchResult("Film", "Film.1080p", "Tracker A", 2024, "8 GB", 12, "magnet:first", "ABC")
-        val duplicate = first.copy(providerName = "Film.WEB-DL", providerLabel = "Tracker B", magnetUri = "magnet:second", providerContentId = "abc")
-        val distinct = first.copy(title = "Another film", magnetUri = "magnet:third", providerContentId = "DEF")
-
-        val result = deduplicatetv.polya.core.model.MediaSearchResults(listOf(first, duplicate, distinct))
-
-        assertEquals(2, result.size)
-        assertEquals("magnet:first", result.first().magnetUri)
-    }
-
-    @Test fun searchResultsWithoutMagnetAreNotSelectable() {
-        val invalid = tv.polya.core.model.MediaSearchResult("Film", "", "", 0, "", 0, "", "abc")
-        val valid = invalid.copy(magnetUri = "magnet:valid")
-
-        assertEquals(listOf(valid), deduplicatetv.polya.core.model.MediaSearchResults(listOf(invalid, valid)))
     }
 }

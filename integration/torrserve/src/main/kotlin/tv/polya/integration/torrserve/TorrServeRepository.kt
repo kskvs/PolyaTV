@@ -2,6 +2,7 @@ package tv.polya.integration.torrserve
 
 import android.content.Context
 import tv.polya.core.model.MediaSearchResult
+import tv.polya.core.model.deduplicateMediaSearchResults
 import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

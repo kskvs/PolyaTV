@@ -25,3 +25,11 @@ data class MediaSearchResult(
     val magnetUri: String,
     val providerContentId: String,
 )
+
+
+/** Deduplicate provider search matches while preserving the first provider result. */
+fun deduplicateMediaSearchResults(results: List<MediaSearchResult>): List<MediaSearchResult> =
+    results.asSequence()
+        .filter { it.title.isNotBlank() && it.magnetUri.isNotBlank() }
+        .distinctBy { it.providerContentId.trim().lowercase().ifBlank { it.magnetUri.trim() } }
+        .toList()
