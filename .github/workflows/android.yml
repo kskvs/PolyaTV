@@ -1,6 +1,6 @@
 name: Android
 concurrency:
-  group: android-${{ github.head_ref || github.ref }}
+  group: android-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 on:
