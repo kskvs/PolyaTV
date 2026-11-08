@@ -45,13 +45,21 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import tv.polya.core.model.MediaContent
+import tv.polya.integration.torrserve.TorrServeSearchResult
 
-private enum class HomePage { HOME, SETTINGS }
+private enum class HomePage { HOME, SEARCH, SETTINGS }
 
 @Composable
 fun PolyaHomeScreen(
     items: List<MediaContent>,
     historyItems: List<MediaContent>,
+    searchQuery: String,
+    searchResults: List<TorrServeSearchResult>,
+    searchStatus: String,
+    isSearching: Boolean,
+    onSearchQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onSearchResultSelected: (TorrServeSearchResult) -> Unit,
     serverUrl: String,
     connectionMessage: String,
     isRefreshing: Boolean,
@@ -74,12 +82,23 @@ fun PolyaHomeScreen(
                 Spacer(Modifier.weight(1f))
                 NavItem("Главная", page == HomePage.HOME) { page = HomePage.HOME }
                 Spacer(Modifier.width(10.dp))
+                NavItem("Поиск", page == HomePage.SEARCH) { page = HomePage.SEARCH }
+                Spacer(Modifier.width(10.dp))
                 NavItem("Настройки", page == HomePage.SETTINGS) { page = HomePage.SETTINGS }
             }
             when (page) {
                 HomePage.HOME -> HomeContent(
                     items, historyItems, connectionMessage, isRefreshing, onRefresh,
                     { page = HomePage.SETTINGS }, onItemSelected,
+                )
+                HomePage.SEARCH -> SearchContent(
+                    query = searchQuery,
+                    results = searchResults,
+                    status = searchStatus,
+                    isSearching = isSearching,
+                    onQueryChange = onSearchQueryChange,
+                    onSearch = onSearch,
+                    onResultSelected = onSearchResultSelected,
                 )
                 HomePage.SETTINGS -> SettingsContent(
                     serverUrl, connectionMessage, isRefreshing, onServerUrlChange,
@@ -213,6 +232,98 @@ private fun HomeContent(
                 ActionSurface(if (isRefreshing) "Обновление…" else "Обновить список", onRefresh, enabled = !isRefreshing)
                 Text("Выбор карточки открывает штатный chooser TorrServe, без прямого старта файла.", color = Color(0xFF7F8B98), fontSize = 12.sp)
             }
+        }
+    }
+}
+
+
+@Composable
+private fun SearchContent(
+    query: String,
+    results: List<TorrServeSearchResult>,
+    status: String,
+    isSearching: Boolean,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onResultSelected: (TorrServeSearchResult) -> Unit,
+) {
+    Column(Modifier.fillMaxSize().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text("Поиск по TorrServe", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(0.9f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.weight(1f).height(58.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = SurfaceDefaults.colors(containerColor = Color(0xFF1B2530)),
+            ) {
+                Box(Modifier.fillMaxSize().padding(horizontal = 18.dp), contentAlignment = Alignment.CenterStart) {
+                    BasicTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
+                        decorationBox = { inner ->
+                            if (query.isBlank()) Text("Название фильма или сериала", color = Color(0xFF778494), fontSize = 17.sp)
+                            inner()
+                        },
+                    )
+                }
+            }
+            ActionSurface(if (isSearching) "Поиск…" else "Найти", onSearch, enabled = !isSearching && query.isNotBlank())
+        }
+        Text(status, color = Color(0xFF9BA8B6), fontSize = 13.sp, maxLines = 2)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 28.dp),
+        ) {
+            itemsIndexed(results, key = { index, item -> item.hash.ifBlank { item.magnet.ifBlank { "result-$index" } } }) { _, result ->
+                SearchResultCard(result, onClick = { onResultSelected(result) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResultCard(result: TorrServeSearchResult, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(0.92f),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.012f),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color(0xFF19232D),
+            focusedContainerColor = Color(0xFF263B45),
+        ),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.width(62.dp).height(82.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFF35515A), Color(0xFF202B38))),
+                    RoundedCornerShape(8.dp),
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(result.title.take(1).uppercase(), color = Color(0xFFDAE8E8), fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(result.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                val details = listOfNotNull(
+                    result.year.takeIf { it > 0 }?.toString(),
+                    result.size.takeIf { it.isNotBlank() },
+                    result.tracker.takeIf { it.isNotBlank() },
+                    result.seeders.takeIf { it >= 0 }?.let { "сидов: $it" },
+                ).joinToString(" · ")
+                Text(details, color = Color(0xFF9BA8B6), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text("Добавить\nи выбрать", color = Color(0xFF80D9C7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

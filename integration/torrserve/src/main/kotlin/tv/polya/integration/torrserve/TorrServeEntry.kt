@@ -121,3 +121,16 @@ fun buildTorrServeHistory(
         }
         .sortedByDescending { it.lastObservedAt }
 }
+
+
+/** One external index result returned by the MatriX /search endpoint. */
+data class TorrServeSearchResult(
+    val title: String,
+    val torrentName: String,
+    val tracker: String,
+    val year: Int,
+    val size: String,
+    val seeders: Int,
+    val magnet: String,
+    val hash: String,
+)

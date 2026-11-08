@@ -9,6 +9,7 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 /** MatriX HTTP adapter with last-known-good list and viewed-history snapshots. */
 class TorrServeRepository(context: Context) {
@@ -90,6 +91,101 @@ class TorrServeRepository(context: Context) {
                 history = cachedHistory(),
             )
         }
+    }
+
+    /** Search TorrServe's own index. Results are not added until the user selects one. */
+    suspend fun searchTorrents(query: String): List<TorrServeSearchResult> = withContext(Dispatchers.IO) {
+        val base = serverUrl().trim().trimEnd('/')
+        val normalized = query.trim()
+        if (normalized.isBlank()) return@withContext emptyList()
+        if (!base.startsWith("http://") && !base.startsWith("https://")) {
+            throw IllegalStateException("Сначала укажите адрес TorrServe в настройках")
+        }
+
+        val encoded = URLEncoder.encode(normalized, Charsets.UTF_8.name())
+        val connection = (URL("$base/search?query=$encoded").openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 5_000
+            readTimeout = 12_000
+            setRequestProperty("Accept", "application/json")
+        }
+        val response = try {
+            val code = connection.responseCode
+            if (code !in 200..299) error("HTTP $code")
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
+        parseSearchResults(response)
+    }
+
+    /**
+     * A result from /search is only a tracker magnet. Add it to the local TorrServe server first,
+     * then return its actual server hash so the caller can open the native file chooser.
+     */
+    suspend fun addSearchResult(result: TorrServeSearchResult): TorrServeEntry = withContext(Dispatchers.IO) {
+        val base = serverUrl().trim().trimEnd('/')
+        val existing = cachedEntries().firstOrNull {
+            (result.hash.isNotBlank() && it.hash.equals(result.hash, ignoreCase = true))
+        }
+        if (existing != null) return@withContext existing
+
+        val magnet = result.magnet.trim()
+        if (magnet.isBlank()) {
+            throw IllegalStateException("В результате поиска нет magnet-ссылки")
+        }
+
+        val request = JSONObject()
+            .put("action", "add")
+            .put("link", magnet)
+            .put("title", result.title)
+            .put("poster", "")
+            .put("category", "")
+            .put("data", "")
+            .put("save_to_db", true)
+
+        val response = JSONObject(postJson(base, "/torrents", request.toString()))
+        val hash = response.optString("hash").trim().ifBlank { result.hash.trim().lowercase() }
+        if (hash.isBlank()) {
+            throw IllegalStateException("TorrServe добавил результат без hash в ответе")
+        }
+
+        val added = TorrServeEntry(
+            hash = hash.lowercase(),
+            title = response.optString("title").trim().ifBlank { result.title },
+            poster = response.optString("poster").trim(),
+            timestamp = response.optLong("timestamp", System.currentTimeMillis()),
+        )
+        val updated = (listOf(added) + cachedEntries()).distinctBy { it.hash.lowercase() }
+        saveSnapshot(updated)
+        added
+    }
+
+    private fun parseSearchResults(json: String): List<TorrServeSearchResult> {
+        val array = JSONArray(json)
+        val unique = LinkedHashMap<String, TorrServeSearchResult>()
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            val title = item.optString("Title").trim().ifBlank { item.optString("Name").trim() }
+            val magnet = item.optString("Magnet").trim()
+            val hash = item.optString("Hash").trim().lowercase()
+            if (title.isBlank() || magnet.isBlank()) continue
+            val key = hash.ifBlank { magnet }
+            unique.putIfAbsent(
+                key,
+                TorrServeSearchResult(
+                    title = title,
+                    torrentName = item.optString("Name").trim(),
+                    tracker = item.optString("Tracker").trim(),
+                    year = item.optInt("Year", 0),
+                    size = item.optString("Size").trim(),
+                    seeders = item.optInt("Seed", 0),
+                    magnet = magnet,
+                    hash = hash,
+                ),
+            )
+        }
+        return unique.values.toList()
     }
 
     private fun postJson(base: String, path: String, body: String): String {
