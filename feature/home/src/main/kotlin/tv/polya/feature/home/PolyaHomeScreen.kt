@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import tv.polya.core.model.MediaContent
 
@@ -202,8 +203,8 @@ private fun SettingsContent(
         )
         Surface(
             modifier = Modifier.fillMaxWidth(0.72f).height(62.dp),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-            colors = ClickableSurfaceDefaults.colors(containerColor = Color(0xFF1B2530)),
+            shape = RoundedCornerShape(12.dp),
+            colors = SurfaceDefaults.colors(containerColor = Color(0xFF1B2530)),
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 18.dp), contentAlignment = Alignment.CenterStart) {
                 BasicTextField(
@@ -248,7 +249,7 @@ private fun NavItem(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun SourcePill(label: String, active: Boolean) {
-    Surface(shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(30.dp)), colors = ClickableSurfaceDefaults.colors(containerColor = if (active) Color(0xFF1D383D) else Color(0xFF1B222B))) {
+    Surface(shape = RoundedCornerShape(30.dp), colors = SurfaceDefaults.colors(containerColor = if (active) Color(0xFF1D383D) else Color(0xFF1B222B))) {
         Text(
             if (active) "$label · подключение" else "$label · скоро",
             color = if (active) Color(0xFF80D9C7) else Color(0xFF8995A2),
@@ -266,7 +267,8 @@ private fun MediaCard(item: MediaContent, focusRequester: FocusRequester?, onCli
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.055f),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = androidx.tv.material3.Border(
-                BorderStroke(2.dp, Color(0xFF75D9C8)), RoundedCornerShape(14.dp),
+                border = BorderStroke(2.dp, Color(0xFF75D9C8)),
+                shape = RoundedCornerShape(14.dp),
             ),
         ),
         colors = ClickableSurfaceDefaults.colors(containerColor = Color(0xFF1B2732), focusedContainerColor = Color(0xFF273946)),
