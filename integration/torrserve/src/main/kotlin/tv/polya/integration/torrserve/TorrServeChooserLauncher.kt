@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 
 /**
- * Opens TorrServe's native chooser. action=play is deliberately not used because it skips
- * the file/episode selection screen and starts playback immediately.
+ * Delegates playback to TorrServe MatriX.
+ *
+ * action=play is the native smart path: a single-file torrent starts immediately,
+ * while a multi-file torrent opens TorrServe's own file/episode list.
  */
 class TorrServeChooserLauncher {
     fun open(context: Context, entry: TorrServeEntry): Boolean = runCatching {
@@ -21,7 +23,7 @@ class TorrServeChooserLauncher {
             putExtra("hash", entry.hash)
             putExtra("title", entry.title)
             if (entry.poster.isNotBlank()) putExtra("poster", entry.poster)
-            putExtra("action", "choose")
+            putExtra("action", "play")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 }
