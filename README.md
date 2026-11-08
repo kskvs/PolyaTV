@@ -2,15 +2,17 @@
 
 Самостоятельный Android TV launcher/медиахаб. CleanMyTV2 не является основой приложения и используется только для аудита отдельных технических контрактов.
 
-## Первая реализация
-- многомодульная основа Android TV;
-- Kotlin + Jetpack Compose for TV;
-- домашний экран с D-pad навигацией, базовой системой фокуса и экраном подключений;
-- TorrServe MatriX adapter: POST `/torrents` с `action=list`, last-known-good cache и защита карточек от временного исчезновения;
-- запуск стандартного TorrServe chooser через `action=choose`;
+## Уже реализовано
+- многомодульная основа Android TV на Kotlin + Jetpack Compose for TV;
+- домашний экран с D-pad навигацией и списком установленных ТВ-приложений;
+- TorrServe MatriX adapter: список, постеры, last-known-good cache и устойчивость к кратковременно пропадающим карточкам;
+- история по MatriX `/viewed` с локальным кэшем отметок;
+- внутренний поиск по каталогу TorrServe: результат добавляется только после выбора пользователя;
+- системный Android TV Search provider для поиска по уже сохранённой медиатеке TorrServe;
+- открытие стандартного TorrServe chooser через `action=choose`;
 - GitHub Actions: unit tests и сборка debug APK.
 
-Lampa, NUM, общий поиск и полноценный каталог постеров пока не реализованы.
+Lampa/NUM пока не подключены как полноценные каталоги PolyaTV. Проверяются их внешние интерфейсы и ограничения. Глобальный поиск выдаёт только данные из уже сохранённого каталога PolyaTV и не делает сетевых запросов из ContentProvider.
 
 ## Сборка Windows
 Требуются JDK 17 и Android SDK Platform 37:

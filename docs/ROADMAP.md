@@ -5,12 +5,13 @@
 - [ ] Проверить API/контракты TorrServe, Lampa и NUM.
 - [ ] Проверить доступность истории и прогресса, включая Android MediaSession.
 - [ ] Проверить API, лицензии и attribution источников постеров.
-- [ ] Проверить Android TV Search integration и ограничения пульта Philips.
+- [x] Реализовать Android TV Search Provider по публичному Search API.
+- [ ] Проверить отображение сторонних результатов и кнопку Search на Philips firmware.
 - [ ] Зафиксировать совместимые версии Android SDK, Gradle, Kotlin и Compose for TV.
 
 ## Phase 1 — Skeleton
-- [ ] Минимальный Android TV проект.
-- [ ] CI: debug APK и unit tests.
+- [x] Минимальный многомодульный Android TV проект.
+- [x] CI: unit tests и debug APK.
 - [ ] Дизайн-система и тестовый D-pad экран.
 - [ ] Базовая навигация и устойчивое восстановление фокуса.
 - [ ] Локальная БД и настройки.
@@ -19,13 +20,15 @@
 - [ ] Нормализованная модель и дедупликация.
 - [ ] Независимые адаптеры источников.
 - [ ] Кэш карточек/постеров и last-known-good snapshots.
-- [ ] Единая лента и глобальный поиск.
+- [ ] Единая лента TorrServe/Lampa/NUM.
+- [x] Внутренний поиск TorrServe и Android TV system-search provider для локального кэша.
 
 ## Phase 3 — Playback
-- [ ] TorrServe integration со штатным chooser.
+- [x] TorrServe integration со штатным chooser по подтверждённому `action=choose` контракту; реальная проверка на Philips ещё нужна.
 - [ ] Source launch references для Lampa/NUM.
 - [ ] Проверка запуска на Philips TV.
-- [ ] История и прогресс с обозначением доступности данных.
+- [x] Первичная история просмотренных файлов через MatriX `/viewed` с локальным журналом наблюдений.
+- [ ] Проверка точного resume progress и синхронизация с Lampa/NUM.
 
 ## Phase 4 — Product UX
 - [ ] Hero banner и настраиваемые ряды.

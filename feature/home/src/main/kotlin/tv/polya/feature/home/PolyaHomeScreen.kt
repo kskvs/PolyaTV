@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +59,7 @@ fun PolyaHomeScreen(
     onAppSelected: (TvAppShortcut) -> Unit,
     historyItems: List<MediaContent>,
     searchQuery: String,
+    initialSearchQuery: String,
     searchResults: List<MediaSearchResult>,
     searchStatus: String,
     isSearching: Boolean,
@@ -73,6 +75,12 @@ fun PolyaHomeScreen(
     onItemSelected: (MediaContent) -> Unit,
 ) {
     var page by rememberSaveable { mutableStateOf(HomePage.HOME) }
+    LaunchedEffect(initialSearchQuery) {
+        if (initialSearchQuery.isNotBlank()) {
+            page = HomePage.SEARCH
+            onSearchQueryChange(initialSearchQuery)
+        }
+    }
     MaterialTheme {
         Column(
             modifier = Modifier.fillMaxSize().background(

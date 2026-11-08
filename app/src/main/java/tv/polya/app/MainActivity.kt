@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
     private val items = mutableStateOf<List<MediaContent>>(emptyList())
     private val historyItems = mutableStateOf<List<MediaContent>>(emptyList())
     private val searchQuery = mutableStateOf("")
+    private val systemSearchQuery = mutableStateOf("")
     private val searchResults = mutableStateOf<List<MediaSearchResult>>(emptyList())
     private val searchStatus = mutableStateOf("Введите название фильма или сериала.")
     private val isSearching = mutableStateOf(false)
@@ -38,6 +39,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         torrServe = TorrServeRepository(applicationContext)
         serverUrl.value = torrServe.serverUrl()
+        systemSearchQuery.value = intent.getStringExtra(EXTRA_SYSTEM_SEARCH_QUERY).orEmpty()
+        searchQuery.value = systemSearchQuery.value
         installedApps.value = discoverTvApps()
         items.value = torrServe.cachedEntries().map { it.toMediaContent(serverUrl.value) }
         historyItems.value = mapHistory(torrServe.cachedHistory(), torrServe.cachedEntries(), serverUrl.value)
@@ -49,6 +52,7 @@ class MainActivity : ComponentActivity() {
                 onAppSelected = ::launchTvApp,
                 historyItems = historyItems.value,
                 searchQuery = searchQuery.value,
+                initialSearchQuery = systemSearchQuery.value,
                 searchResults = searchResults.value,
                 searchStatus = searchStatus.value,
                 isSearching = isSearching.value,
@@ -77,8 +81,20 @@ class MainActivity : ComponentActivity() {
             )
         }
         if (serverUrl.value.isNotBlank()) refreshTorrServe()
+        if (systemSearchQuery.value.isNotBlank()) searchTorrServe()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val query = intent.getStringExtra(EXTRA_SYSTEM_SEARCH_QUERY)?.trim().orEmpty()
+        if (query.isNotBlank()) {
+            systemSearchQuery.value = query
+            searchQuery.value = query
+            searchResults.value = emptyList()
+            searchTorrServe()
+        }
+    }
 
     private fun discoverTvApps(): List<TvAppShortcut> {
         val found = LinkedHashMap<String, TvAppShortcut>()
@@ -163,6 +179,10 @@ class MainActivity : ComponentActivity() {
                 searchStatus.value = "Не удалось добавить раздачу: ${error.message ?: error.javaClass.simpleName}"
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_SYSTEM_SEARCH_QUERY = "tv.polya.app.extra.SYSTEM_SEARCH_QUERY"
     }
 
     private fun refreshTorrServe() {
