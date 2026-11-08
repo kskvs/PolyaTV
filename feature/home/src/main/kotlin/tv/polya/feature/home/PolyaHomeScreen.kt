@@ -181,7 +181,7 @@ private fun HomeContent(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            if (items.isNotEmpty()) "OK — открыть стандартное меню TorrServe"
+                            if (items.isNotEmpty()) "OK — запустить фильм или открыть список серий"
                             else "Подключите TorrServe, чтобы загрузить вашу медиатеку",
                             color = Color(0xFFD5DEE7), fontSize = 16.sp,
                         )
@@ -269,7 +269,7 @@ private fun HomeContent(
         item(key = "refresh") {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 ActionSurface(if (isRefreshing) "Обновление…" else "Обновить список", onRefresh, enabled = !isRefreshing)
-                Text("Выбор карточки открывает штатный chooser TorrServe, без прямого старта файла.", color = Color(0xFF7F8B98), fontSize = 12.sp)
+                Text("Один файл запускается сразу; для нескольких TorrServe покажет список файлов и серий.", color = Color(0xFF7F8B98), fontSize = 12.sp)
             }
         }
     }
