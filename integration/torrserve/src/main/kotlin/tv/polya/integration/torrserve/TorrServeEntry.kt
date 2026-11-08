@@ -13,6 +13,7 @@ data class TorrServeRefreshResult(
     val entries: List<TorrServeEntry>,
     val fromCache: Boolean,
     val message: String,
+    val history: List<TorrServeHistoryEntry> = emptyList(),
 )
 
 /** Retain missing cards for two successful empty polls; failed HTTP requests never age the cache. */
@@ -82,10 +83,15 @@ fun mergeTorrServeViewedState(
         if (hash.isBlank() || mark.fileIndex < 1) return@forEach
         val key = "$hash:${mark.fileIndex}"
         val old = previous[key]
-        val changed = old == null || kotlin.math.abs(mark.timecode - old.timecode) > 0.5
+        val lastObservedAt = when {
+            old == null -> now
+            kotlin.math.abs(mark.timecode - old.timecode) > 0.5 -> now
+            old.lastObservedAt <= 0L -> now
+            else -> old.lastObservedAt
+        }
         next[key] = TorrServeViewedState(
             timecode = mark.timecode.coerceAtLeast(0.0),
-            lastObservedAt = if (changed || old.lastObservedAt <= 0L) now else old.lastObservedAt,
+            lastObservedAt = lastObservedAt,
         )
     }
     return next
