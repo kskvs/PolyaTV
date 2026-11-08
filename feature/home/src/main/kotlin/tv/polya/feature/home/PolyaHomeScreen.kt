@@ -210,12 +210,12 @@ private fun HomeContent(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("ИСТОЧНИКИ", color = Color(0xFFB9C4D0), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SourcePill("TorrServe", true)
-                    SourcePill("Lampa", false)
-                    SourcePill("NUM", false)
+                    SourcePill("TorrServe", "медиатека")
+                    SourcePill("Lampa", "поиск")
+                    SourcePill("NUM", "рекомендации")
                 }
                 Text(
-                    connectionMessage.ifBlank { "TorrServe — первый подключаемый источник. Lampa и NUM будут добавлены отдельными модулями." },
+                    connectionMessage.ifBlank { "TorrServe — медиатека и запуск; Lampa и NUM доступны в поиске через опубликованные интерфейсы." },
                     color = Color(0xFF8F9BA8), fontSize = 13.sp, maxLines = 2,
                 )
             }
@@ -465,11 +465,11 @@ private fun NavItem(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SourcePill(label: String, active: Boolean) {
-    Surface(shape = RoundedCornerShape(30.dp), colors = SurfaceDefaults.colors(containerColor = if (active) Color(0xFF1D383D) else Color(0xFF1B222B))) {
+private fun SourcePill(label: String, capability: String) {
+    Surface(shape = RoundedCornerShape(30.dp), colors = SurfaceDefaults.colors(containerColor = Color(0xFF1D383D))) {
         Text(
-            if (active) "$label · подключение" else "$label · скоро",
-            color = if (active) Color(0xFF80D9C7) else Color(0xFF8995A2),
+            "$label · $capability",
+            color = Color(0xFF80D9C7),
             fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
         )
     }
