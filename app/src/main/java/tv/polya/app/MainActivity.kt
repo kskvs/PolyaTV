@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
                 serverUrl = serverUrl.value,
                 connectionMessage = status.value,
                 isRefreshing = isRefreshing.value,
-                onServerUrlChange = { serverUrl.value = it },
+                onServerUrlChange = { value ->\n                    serverUrl.value = value\n                    torrServe.saveServerUrl(value)\n                },
                 onSaveAndRefresh = {
                     torrServe.saveServerUrl(serverUrl.value)
                     refreshTorrServe()
