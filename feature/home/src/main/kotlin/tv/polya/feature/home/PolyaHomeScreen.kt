@@ -45,7 +45,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import tv.polya.core.model.MediaContent
-import tv.polya.integration.torrserve.TorrServeSearchResult
+import tv.polya.core.model.MediaSearchResult
 
 private enum class HomePage { HOME, SEARCH, SETTINGS }
 
@@ -54,12 +54,12 @@ fun PolyaHomeScreen(
     items: List<MediaContent>,
     historyItems: List<MediaContent>,
     searchQuery: String,
-    searchResults: List<TorrServeSearchResult>,
+    searchResults: List<MediaSearchResult>,
     searchStatus: String,
     isSearching: Boolean,
     onSearchQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
-    onSearchResultSelected: (TorrServeSearchResult) -> Unit,
+    onSearchResultSelected: (MediaSearchResult) -> Unit,
     serverUrl: String,
     connectionMessage: String,
     isRefreshing: Boolean,
@@ -240,12 +240,12 @@ private fun HomeContent(
 @Composable
 private fun SearchContent(
     query: String,
-    results: List<TorrServeSearchResult>,
+    results: List<MediaSearchResult>,
     status: String,
     isSearching: Boolean,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
-    onResultSelected: (TorrServeSearchResult) -> Unit,
+    onResultSelected: (MediaSearchResult) -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Поиск по TorrServe", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
@@ -276,7 +276,7 @@ private fun SearchContent(
         }
         Text(status, color = Color(0xFF9BA8B6), fontSize = 13.sp, maxLines = 2)
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 28.dp),
         ) {
@@ -288,7 +288,7 @@ private fun SearchContent(
 }
 
 @Composable
-private fun SearchResultCard(result: TorrServeSearchResult, onClick: () -> Unit) {
+private fun SearchResultCard(result: MediaSearchResult, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(0.92f),

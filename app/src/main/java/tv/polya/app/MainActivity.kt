@@ -9,12 +9,12 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import tv.polya.core.model.ContentType
 import tv.polya.core.model.MediaContent
+import tv.polya.core.model.MediaSearchResult
 import tv.polya.feature.home.PolyaHomeScreen
 import tv.polya.integration.torrserve.TorrServeChooserLauncher
 import tv.polya.integration.torrserve.TorrServeEntry
 import tv.polya.integration.torrserve.TorrServeHistoryEntry
 import tv.polya.integration.torrserve.TorrServeRepository
-import tv.polya.integration.torrserve.TorrServeSearchResult
 import tv.polya.integration.torrserve.resolvePosterUrl
 
 class MainActivity : ComponentActivity() {
@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
     private val items = mutableStateOf<List<MediaContent>>(emptyList())
     private val historyItems = mutableStateOf<List<MediaContent>>(emptyList())
     private val searchQuery = mutableStateOf("")
-    private val searchResults = mutableStateOf<List<TorrServeSearchResult>>(emptyList())
+    private val searchResults = mutableStateOf<List<MediaSearchResult>>(emptyList())
     private val searchStatus = mutableStateOf("Введите название фильма или сериала.")
     private val isSearching = mutableStateOf(false)
     private val status = mutableStateOf("Введите адрес TorrServe в настройках и проверьте соединение.")
@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun openSearchResult(result: TorrServeSearchResult) {
+    private fun openSearchResult(result: MediaSearchResult) {
         lifecycleScope.launch {
             try {
                 searchStatus.value = "Добавляем «${result.title}» в TorrServe…"

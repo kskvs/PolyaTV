@@ -12,3 +12,16 @@ data class MediaContent(
 )
 
 enum class ContentType { MOVIE, SERIES, EPISODE, UNKNOWN }
+
+
+/** Provider-neutral search match. Adapters keep their original launch reference separately. */
+data class MediaSearchResult(
+    val title: String,
+    val providerName: String,
+    val providerLabel: String,
+    val year: Int,
+    val sizeLabel: String,
+    val seedCount: Int,
+    val magnetUri: String,
+    val providerContentId: String,
+)

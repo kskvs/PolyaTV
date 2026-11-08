@@ -124,22 +124,12 @@ fun buildTorrServeHistory(
 
 
 /** One external index result returned by the MatriX /search endpoint. */
-data class TorrServeSearchResult(
-    val title: String,
-    val torrentName: String,
-    val tracker: String,
-    val year: Int,
-    val size: String,
-    val seeders: Int,
-    val magnet: String,
-    val hash: String,
-)
 
 /** Deduplicate tracker search matches while preserving the provider result order. */
 fun deduplicateTorrServeSearchResults(
-    results: List<TorrServeSearchResult>,
+    results: List<tv.polya.core.model.MediaSearchResult>,
 ): List<TorrServeSearchResult> = results
     .asSequence()
-    .filter { it.title.isNotBlank() && it.magnet.isNotBlank() }
-    .distinctBy { it.hash.trim().lowercase().ifBlank { it.magnet.trim() } }
+    .filter { it.title.isNotBlank() && it.magnetUri.isNotBlank() }
+    .distinctBy { it.providerContentId.trim().lowercase().ifBlank { it.magnetUri.trim() } }
     .toList()

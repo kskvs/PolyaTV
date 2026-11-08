@@ -1,6 +1,7 @@
 package tv.polya.integration.torrserve
 
 import android.content.Context
+import tv.polya.core.model.MediaSearchResult
 import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -94,7 +95,7 @@ class TorrServeRepository(context: Context) {
     }
 
     /** Search TorrServe's own index. Results are not added until the user selects one. */
-    suspend fun searchTorrents(query: String): List<TorrServeSearchResult> = withContext(Dispatchers.IO) {
+    suspend fun searchTorrents(query: String): List<MediaSearchResult> = withContext(Dispatchers.IO) {
         val base = serverUrl().trim().trimEnd('/')
         val normalized = query.trim()
         if (normalized.isBlank()) return@withContext emptyList()
@@ -123,14 +124,14 @@ class TorrServeRepository(context: Context) {
      * A result from /search is only a tracker magnet. Add it to the local TorrServe server first,
      * then return its actual server hash so the caller can open the native file chooser.
      */
-    suspend fun addSearchResult(result: TorrServeSearchResult): TorrServeEntry = withContext(Dispatchers.IO) {
+    suspend fun addSearchResult(result: MediaSearchResult): TorrServeEntry = withContext(Dispatchers.IO) {
         val base = serverUrl().trim().trimEnd('/')
         val existing = cachedEntries().firstOrNull {
-            (result.hash.isNotBlank() && it.hash.equals(result.hash, ignoreCase = true))
+            (result.providerContentId.isNotBlank() && it.hash.equals(result.providerContentId, ignoreCase = true))
         }
         if (existing != null) return@withContext existing
 
-        val magnet = result.magnet.trim()
+        val magnet = result.magnetUri.trim()
         if (magnet.isBlank()) {
             throw IllegalStateException("В результате поиска нет magnet-ссылки")
         }
@@ -145,7 +146,7 @@ class TorrServeRepository(context: Context) {
             .put("save_to_db", true)
 
         val response = JSONObject(postJson(base, "/torrents", request.toString()))
-        val hash = response.optString("hash").trim().ifBlank { result.hash.trim().lowercase() }
+        val hash = response.optString("hash").trim().ifBlank { result.providerContentId.trim().lowercase() }
         if (hash.isBlank()) {
             throw IllegalStateException("TorrServe добавил результат без hash в ответе")
         }
@@ -161,7 +162,7 @@ class TorrServeRepository(context: Context) {
         added
     }
 
-    private fun parseSearchResults(json: String): List<TorrServeSearchResult> {
+    private fun parseSearchResults(json: String): List<MediaSearchResult> {
         val array = JSONArray(json)
         val parsed = buildList {
             for (index in 0 until array.length()) {
@@ -170,20 +171,20 @@ class TorrServeRepository(context: Context) {
                 val magnet = item.optString("Magnet").trim()
                 if (title.isBlank() || magnet.isBlank()) continue
                 add(
-                    TorrServeSearchResult(
+                    MediaSearchResult(
                         title = title,
-                        torrentName = item.optString("Name").trim(),
-                        tracker = item.optString("Tracker").trim(),
+                        providerName = item.optString("Name").trim(),
+                        providerLabel = item.optString("Tracker").trim(),
                         year = item.optInt("Year", 0),
-                        size = item.optString("Size").trim(),
-                        seeders = item.optInt("Seed", 0),
-                        magnet = magnet,
-                        hash = item.optString("Hash").trim().lowercase(),
+                        sizeLabel = item.optString("Size").trim(),
+                        seedCount = item.optInt("Seed", 0),
+                        magnetUri = magnet,
+                        providerContentId = item.optString("Hash").trim().lowercase(),
                     ),
                 )
             }
         }
-        return deduplicateTorrServeSearchResults(parsed)
+        return deduplicateMediaSearchResults(parsed)
     }
 
     private fun postJson(base: String, path: String, body: String): String {
