@@ -31,3 +31,16 @@ fun mergeTorrServeEntries(
         .sortedByDescending { maxOf(it.lastViewedAt, it.timestamp) }
         .take(maxItems.coerceIn(1, 100))
 }
+
+/** Resolve a MatriX poster reference against the configured server URL. */
+fun resolvePosterUrl(serverUrl: String, posterReference: String?): String? {
+    val reference = posterReference?.trim().orEmpty()
+    if (reference.isBlank()) return null
+    if (reference.startsWith("https://", ignoreCase = true) ||
+        reference.startsWith("http://", ignoreCase = true)
+    ) return reference
+
+    val base = serverUrl.trim().trimEnd('/')
+    if (base.isBlank()) return null
+    return "$base/${reference.trimStart('/')}"
+}
