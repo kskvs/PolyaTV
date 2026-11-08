@@ -5,6 +5,7 @@
     <queries>
         <provider android:authorities="top.rootu.lampa.atvsearch" />
         <package android:name="top.rootu.lampa" />
+        <package android:name="ru.yourok.num" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
