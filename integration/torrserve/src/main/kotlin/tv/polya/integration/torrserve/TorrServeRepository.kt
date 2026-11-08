@@ -61,7 +61,10 @@ class TorrServeRepository(context: Context) {
                     now = System.currentTimeMillis(),
                 )
                 saveViewedState(state)
-                buildTorrServeHistory(freshMarks, state).also(::saveHistory)
+                mergeTorrServeHistory(
+                    previous = cachedHistory(),
+                    incoming = buildTorrServeHistory(freshMarks, state),
+                ).also(::saveHistory)
             } else {
                 cachedHistory()
             }

@@ -77,7 +77,7 @@ fun mergeTorrServeViewedState(
     marks: List<TorrServeViewedMark>,
     now: Long,
 ): Map<String, TorrServeViewedState> {
-    val next = LinkedHashMap<String, TorrServeViewedState>()
+    val next = LinkedHashMap(previous)
     marks.forEach { mark ->
         val hash = mark.hash.trim().lowercase()
         if (hash.isBlank() || mark.fileIndex < 1) return@forEach
@@ -120,4 +120,35 @@ fun buildTorrServeHistory(
             )
         }
         .sortedByDescending { it.lastObservedAt }
+}
+
+
+/** Keep previously watched torrents in the local history even if MatriX later prunes Viewed marks. */
+fun mergeTorrServeHistory(
+    previous: List<TorrServeHistoryEntry>,
+    incoming: List<TorrServeHistoryEntry>,
+    maxItems: Int = 100,
+): List<TorrServeHistoryEntry> {
+    val merged = LinkedHashMap<String, TorrServeHistoryEntry>()
+    previous.forEach { old -> merged[old.hash.lowercase()] = old.copy(hash = old.hash.lowercase()) }
+    incoming.forEach { fresh ->
+        val hash = fresh.hash.lowercase()
+        val old = merged[hash]
+        if (old == null) {
+            merged[hash] = fresh.copy(hash = hash)
+        } else {
+            val indices = (old.fileIndices + fresh.fileIndices).distinct().sorted()
+            val times = LinkedHashMap(old.timecodes)
+            times.putAll(fresh.timecodes)
+            merged[hash] = TorrServeHistoryEntry(
+                hash = hash,
+                fileIndices = indices,
+                timecodes = times,
+                lastObservedAt = maxOf(old.lastObservedAt, fresh.lastObservedAt),
+            )
+        }
+    }
+    return merged.values
+        .sortedByDescending { it.lastObservedAt }
+        .take(maxItems.coerceIn(1, 500))
 }

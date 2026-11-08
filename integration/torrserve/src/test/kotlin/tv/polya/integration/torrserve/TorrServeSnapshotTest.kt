@@ -71,3 +71,38 @@ class TorrServeViewedHistoryTest {
         assertTrue(history.isEmpty())
     }
 }
+
+class TorrServeHistoryMergeTest {
+    @Test fun historySurvivesAnEmptyViewedResponse() {
+        val previous = listOf(
+            TorrServeHistoryEntry("abc", listOf(1), mapOf(1 to 120.0), 500L),
+        )
+        val merged = mergeTorrServeHistory(previous, emptyList())
+        assertEquals(previous, merged)
+    }
+
+    @Test fun mergeCombinesEpisodesAndKeepsLatestObservedTime() {
+        val previous = listOf(
+            TorrServeHistoryEntry("ABC", listOf(1), mapOf(1 to 120.0), 500L),
+        )
+        val incoming = listOf(
+            TorrServeHistoryEntry("abc", listOf(2), mapOf(2 to 45.0), 900L),
+        )
+        val merged = mergeTorrServeHistory(previous, incoming).single()
+        assertEquals(listOf(1, 2), merged.fileIndices)
+        assertEquals(120.0, merged.timecodes[1] ?: -1.0, 0.001)
+        assertEquals(45.0, merged.timecodes[2] ?: -1.0, 0.001)
+        assertEquals(900L, merged.lastObservedAt)
+    }
+
+    @Test fun historyIsDeduplicatedByTorrentHashAndBounded() {
+        val previous = (1..8).map {
+            TorrServeHistoryEntry("h$it", listOf(1), mapOf(1 to 0.0), it * 10L)
+        }
+        val incoming = listOf(TorrServeHistoryEntry("H1", listOf(2), mapOf(2 to 30.0), 100L))
+        val merged = mergeTorrServeHistory(previous, incoming, maxItems = 5)
+        assertEquals(5, merged.size)
+        assertEquals(1, merged.count { it.hash == "h1" })
+        assertEquals(listOf(1, 2), merged.first { it.hash == "h1" }.fileIndices)
+    }
+}
