@@ -13,8 +13,10 @@ data class MediaContent(
 
 enum class ContentType { MOVIE, SERIES, EPISODE, UNKNOWN }
 
-
-/** Provider-neutral search match. Adapters keep their original launch reference separately. */
+/**
+ * Search suggestion from a content source.
+ * TorrServe items carry a magnet and hash; catalogue items can carry a poster and a source launch type.
+ */
 data class MediaSearchResult(
     val title: String,
     val providerName: String,
@@ -24,12 +26,24 @@ data class MediaSearchResult(
     val seedCount: Int,
     val magnetUri: String,
     val providerContentId: String,
+    val sourceId: String = "torrserve",
+    val posterUrl: String? = null,
+    val description: String? = null,
+    val launchType: String = "",
 )
 
-
-/** Deduplicate provider search matches while preserving the first provider result. */
+/** Deduplicate within a provider without collapsing distinct source launch paths. */
 fun deduplicateMediaSearchResults(results: List<MediaSearchResult>): List<MediaSearchResult> =
     results.asSequence()
-        .filter { it.title.isNotBlank() && it.magnetUri.isNotBlank() }
-        .distinctBy { it.providerContentId.trim().lowercase().ifBlank { it.magnetUri.trim() } }
+        .filter {
+            it.title.isNotBlank() &&
+                (it.sourceId == "torrserve"
+                    ? it.magnetUri.isNotBlank()
+                    : it.providerContentId.isNotBlank())
+        }
+        .distinctBy {
+            val stableId = it.providerContentId.trim().lowercase()
+                .ifBlank { it.magnetUri.trim().lowercase() }
+            "${it.sourceId.lowercase()}:$stableId"
+        }
         .toList()

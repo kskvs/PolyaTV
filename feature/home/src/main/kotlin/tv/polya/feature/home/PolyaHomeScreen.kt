@@ -280,7 +280,7 @@ private fun SearchContent(
     onResultSelected: (MediaSearchResult) -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Поиск по TorrServe", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Text("Поиск по TorrServe и Lampa", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Row(
             modifier = Modifier.fillMaxWidth(0.9f),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -312,7 +312,7 @@ private fun SearchContent(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 28.dp),
         ) {
-            itemsIndexed(results, key = { index, item -> item.providerContentId.ifBlank { item.magnetUri.ifBlank { "result-$index" } } }) { _, result ->
+            itemsIndexed(results, key = { index, item -> "${item.sourceId}:${item.providerContentId.ifBlank { item.magnetUri.ifBlank { "result-$index" } }}" }) { _, result ->
                 SearchResultCard(result, onClick = { onResultSelected(result) })
             }
         }
@@ -343,11 +343,21 @@ private fun SearchResultCard(result: MediaSearchResult, onClick: () -> Unit) {
                 ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(result.title.take(1).uppercase(), color = Color(0xFFDAE8E8), fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                val poster = result.posterUrl
+                if (!poster.isNullOrBlank()) {
+                    AsyncImage(
+                        model = poster,
+                        contentDescription = result.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Text(result.title.take(1).uppercase(), color = Color(0xFFDAE8E8), fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(result.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                val details = listOfNotNull(
+                val details = result.description ?: listOfNotNull(
                     result.year.takeIf { it > 0 }?.toString(),
                     result.sizeLabel.takeIf { it.isNotBlank() },
                     result.providerLabel.takeIf { it.isNotBlank() },

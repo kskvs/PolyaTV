@@ -15,6 +15,10 @@ TorrServe — основной playback target. Его адаптер изоли
 
 Собрать fixtures и контрактные тесты. Не выводить API из имён методов или предположений.
 
+## Lampa search
+
+Lampa's exported Android TV search provider is queried through `content://top.rootu.lampa.atvsearch/search/search_suggest_query`. Its rows contain TMDB ID, media type, title, description and artwork URL. Selecting a result opens Lampa's exported `top.rootu.lampa.MainActivity` with action `GLOBALSEARCH`, the TMDB ID and `movie/tv` type. No private Lampa database is read. This is a catalogue hand-off; the final torrent selection remains in Lampa and then uses the normal TorrServe hand-off.
+
 ## MatriX search
 
 MatriX.134 client uses GET `/search?query=...` and returns tracker results with title, magnet link, info hash, year, size, tracker and seed count. PolyaTV displays those matches without adding them to the server. Only after explicit user selection does it POST `/torrents` with action `add` and the chosen magnet, then opens the standard chooser using the returned torrent hash. This avoids silently adding every search result.
@@ -24,7 +28,7 @@ MatriX.134 client uses GET `/search?query=...` and returns tracker results with 
 
 ### Подтверждённые внешние интерфейсы и ограничения
 
-- Официальный Android-клиент LAMPA публикует экспортированный поисковый ContentProvider с authority вида `<applicationId>.atvsearch`. Он возвращает TMDB-сущности (фильмы/сериалы), а выбор системной подсказки передаётся в Lampa через `GLOBALSEARCH`. Это открывает карточку внутри Lampa, но само по себе **не даёт torrent hash и не открывает TorrServe chooser**. Поэтому этот provider подходит как дополнительный каталог/метаданные, но не должен выдаваться за готовый TorrServe launch adapter.
+- Официальный Android-клиент LAMPA (application ID `top.rootu.lampa`) публикует экспортированный поисковый ContentProvider `top.rootu.lampa.atvsearch`. Адаптер PolyaTV запрашивает его через Android ContentResolver и получает TMDB-сущности. Выбор результата передаётся в Lampa как `GLOBALSEARCH` с TMDB ID и типом `movie/tv`. Это открывает карточку внутри Lampa, но **не выдаёт torrent hash и не открывает TorrServe chooser напрямую**: пользователь продолжает штатный сценарий Lampa, который может передать выбранный torrent в TorrServe.
 - NUM (пакет, указанный в публичной теме приложения: `ru.yourok.num`) описывается как Android TV приложение с каналами/рекомендациями и системным голосовым поиском. Публичный стабильный контракт прямого чтения его результатов PolyaTV пока не подтверждён. Не читать его приватную БД и не считать внутренние компоненты API без проверки на устройстве.
 
 Перед включением любого адаптера определить установленный вариант приложения, проверить exported provider/activity и проверить полный путь до chooser MatriX 134 на реальном ТВ.

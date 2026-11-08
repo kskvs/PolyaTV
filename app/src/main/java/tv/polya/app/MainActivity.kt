@@ -8,12 +8,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import tv.polya.core.model.ContentType
 import tv.polya.core.model.MediaContent
 import tv.polya.core.model.MediaSearchResult
 import tv.polya.feature.home.PolyaHomeScreen
 import tv.polya.feature.home.TvAppShortcut
+import tv.polya.integration.lampa.LampaSearchAdapter
 import tv.polya.integration.torrserve.TorrServeChooserLauncher
 import tv.polya.integration.torrserve.TorrServeEntry
 import tv.polya.integration.torrserve.TorrServeHistoryEntry
@@ -22,6 +24,7 @@ import tv.polya.integration.torrserve.resolvePosterUrl
 
 class MainActivity : ComponentActivity() {
     private lateinit var torrServe: TorrServeRepository
+    private lateinit var lampaSearch: LampaSearchAdapter
     private val serverUrl = mutableStateOf("")
     private val items = mutableStateOf<List<MediaContent>>(emptyList())
     private val historyItems = mutableStateOf<List<MediaContent>>(emptyList())
@@ -38,6 +41,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         torrServe = TorrServeRepository(applicationContext)
+        lampaSearch = LampaSearchAdapter(applicationContext)
         serverUrl.value = torrServe.serverUrl()
         systemSearchQuery.value = intent.getStringExtra(EXTRA_SYSTEM_SEARCH_QUERY).orEmpty()
         searchQuery.value = systemSearchQuery.value
@@ -57,7 +61,7 @@ class MainActivity : ComponentActivity() {
                 searchStatus = searchStatus.value,
                 isSearching = isSearching.value,
                 onSearchQueryChange = { searchQuery.value = it },
-                onSearch = ::searchTorrServe,
+                onSearch = ::searchAllSources,
                 onSearchResultSelected = ::openSearchResult,
                 serverUrl = serverUrl.value,
                 connectionMessage = status.value,
@@ -81,7 +85,7 @@ class MainActivity : ComponentActivity() {
             )
         }
         if (serverUrl.value.isNotBlank()) refreshTorrServe()
-        if (systemSearchQuery.value.isNotBlank()) searchTorrServe()
+        if (systemSearchQuery.value.isNotBlank()) searchAllSources()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -92,7 +96,7 @@ class MainActivity : ComponentActivity() {
             systemSearchQuery.value = query
             searchQuery.value = query
             searchResults.value = emptyList()
-            searchTorrServe()
+            searchAllSources()
         }
     }
 
@@ -136,7 +140,7 @@ class MainActivity : ComponentActivity() {
         if (::torrServe.isInitialized) installedApps.value = discoverTvApps()
     }
 
-    private fun searchTorrServe() {
+    private fun searchAllSources() {
         if (isSearching.value) return
         val query = searchQuery.value.trim()
         if (query.isBlank()) {
@@ -144,20 +148,37 @@ class MainActivity : ComponentActivity() {
             searchResults.value = emptyList()
             return
         }
+
         lifecycleScope.launch {
             isSearching.value = true
-            searchStatus.value = "Ищем в каталоге TorrServe…"
+            searchStatus.value = "Ищем в TorrServe и Lampa…"
             try {
-                val found = torrServe.searchTorrents(query)
-                searchResults.value = found
-                searchStatus.value = if (found.isEmpty()) {
-                    "Ничего не найдено в каталоге TorrServe."
-                } else {
-                    "Найдено: ${found.size}. Выберите раздачу, чтобы добавить её в TorrServe и открыть штатный выбор файла."
+                val torrServeTask = async { runCatching { torrServe.searchTorrents(query) } }
+                val lampaTask = async { runCatching { lampaSearch.search(query) } }
+
+                val torrentResult = torrServeTask.await()
+                val lampaResult = lampaTask.await()
+                val torrentMatches = torrentResult.getOrDefault(emptyList())
+                val lampaMatches = lampaResult.getOrDefault(emptyList())
+                searchResults.value = tv.polya.core.model.deduplicateMediaSearchResults(
+                    torrentMatches + lampaMatches,
+                )
+
+                val torrentStatus = when {
+                    torrentResult.isSuccess -> "TorrServe: ${torrentMatches.size}"
+                    else -> "TorrServe: ошибка"
                 }
-            } catch (error: Exception) {
-                searchResults.value = emptyList()
-                searchStatus.value = "Ошибка поиска: ${error.message ?: error.javaClass.simpleName}"
+                val lampaStatus = when {
+                    !lampaSearch.isAvailable() -> "Lampa: не установлена"
+                    lampaResult.isSuccess -> "Lampa: ${lampaMatches.size}"
+                    else -> "Lampa: ошибка"
+                }
+                val total = searchResults.value.size
+                searchStatus.value = if (total == 0) {
+                    "Ничего не найдено. $torrentStatus · $lampaStatus"
+                } else {
+                    "Найдено: $total · $torrentStatus · $lampaStatus"
+                }
             } finally {
                 isSearching.value = false
             }
@@ -165,6 +186,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openSearchResult(result: MediaSearchResult) {
+        if (result.sourceId == "lampa") {
+            if (lampaSearch.open(this, result)) {
+                searchStatus.value = "Открыта карточка в Lampa. Продолжите выбор торрента в приложении."
+            } else {
+                searchStatus.value = "Не удалось открыть результат в Lampa. Проверьте установку приложения."
+            }
+            return
+        }
+
         lifecycleScope.launch {
             try {
                 searchStatus.value = "Добавляем «${result.title}» в TorrServe…"

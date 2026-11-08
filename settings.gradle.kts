@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "PolyaTV"
-include(":app", ":core:model", ":feature:home", ":integration:torrserve")
+include(":app", ":core:model", ":feature:home", ":integration:torrserve", ":integration:lampa")
