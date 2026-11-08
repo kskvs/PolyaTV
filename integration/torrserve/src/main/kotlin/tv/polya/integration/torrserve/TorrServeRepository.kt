@@ -22,7 +22,7 @@ class TorrServeRepository(context: Context) {
     private val viewedStateFile = File(appContext.filesDir, "torrserve-viewed-state.json")
     private val historyFile = File(appContext.filesDir, "torrserve-history.json")
 
-    fun serverUrl(): String = preferences.getString(KEY_SERVER_URL, "").orEmpty()
+    fun serverUrl(): String = effectiveTorrServeServerUrl(preferences.getString(KEY_SERVER_URL, null))
 
     fun saveServerUrl(value: String) {
         preferences.edit().putString(KEY_SERVER_URL, value.trim().trimEnd('/')).apply()

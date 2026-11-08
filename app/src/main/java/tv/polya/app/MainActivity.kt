@@ -36,26 +36,30 @@ class MainActivity : ComponentActivity() {
     private val searchResults = mutableStateOf<List<MediaSearchResult>>(emptyList())
     private val searchStatus = mutableStateOf("Введите название фильма или сериала.")
     private val isSearching = mutableStateOf(false)
-    private val status = mutableStateOf("Введите адрес TorrServe в настройках и проверьте соединение.")
+    private val status = mutableStateOf("Проверяем TorrServe на этом телевизоре.")
     private val isRefreshing = mutableStateOf(false)
     private val installedApps = mutableStateOf<List<TvAppShortcut>>(emptyList())
+    private val allInstalledApps = mutableStateOf<List<TvAppShortcut>>(emptyList())
+    private lateinit var launcherPreferences: LauncherPreferences
     private val numPermissionGranted = mutableStateOf(false)
     private val requestNumPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         numPermissionGranted.value = granted
         if (granted && searchQuery.value.isNotBlank()) searchAllSources()
     }
     private val chooserLauncher = TorrServeChooserLauncher()
+    private var refreshNumOnReturn = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         torrServe = TorrServeRepository(applicationContext)
+        launcherPreferences = LauncherPreferences(applicationContext)
         lampaSearch = LampaSearchAdapter(applicationContext)
         numCatalog = NumTvCatalogAdapter(applicationContext)
         numPermissionGranted.value = numCatalog.hasReadPermission()
         serverUrl.value = torrServe.serverUrl()
         systemSearchQuery.value = intent.getStringExtra(EXTRA_SYSTEM_SEARCH_QUERY).orEmpty()
         searchQuery.value = systemSearchQuery.value
-        installedApps.value = discoverTvApps()
+        refreshInstalledApps()
         items.value = torrServe.cachedEntries().map { it.toMediaContent(serverUrl.value) }
         historyItems.value = mapHistory(torrServe.cachedHistory(), torrServe.cachedEntries(), serverUrl.value)
 
@@ -63,13 +67,17 @@ class MainActivity : ComponentActivity() {
             PolyaHomeScreen(
                 items = items.value,
                 installedApps = installedApps.value,
+                allInstalledApps = allInstalledApps.value,
                 onAppSelected = ::launchTvApp,
+                onToggleFavorite = ::toggleFavorite,
+                onToggleHidden = ::toggleHidden,
                 historyItems = historyItems.value,
                 searchQuery = searchQuery.value,
                 initialSearchQuery = systemSearchQuery.value,
                 searchResults = searchResults.value,
                 numPermissionGranted = numPermissionGranted.value,
                 onRequestNumPermission = ::requestNumSearchPermission,
+                onRefreshNum = ::openNumForRefresh,
                 searchStatus = searchStatus.value,
                 isSearching = isSearching.value,
                 onSearchQueryChange = { searchQuery.value = it },
@@ -115,6 +123,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun refreshInstalledApps() {
+        val favorites = launcherPreferences.favorites()
+        val hidden = launcherPreferences.hidden()
+        val all = discoverTvApps().map { app ->
+            app.copy(favorite = app.packageName in favorites, hidden = app.packageName in hidden)
+        }
+        allInstalledApps.value = all
+        installedApps.value = all.filterNot { it.hidden }.sortedWith(
+            compareByDescending<TvAppShortcut> { it.favorite }.thenBy { it.label.lowercase() },
+        )
+    }
+
+    private fun toggleFavorite(app: TvAppShortcut) {
+        launcherPreferences.setFavorite(app.packageName, !app.favorite)
+        refreshInstalledApps()
+    }
+
+    private fun toggleHidden(app: TvAppShortcut) {
+        launcherPreferences.setHidden(app.packageName, !app.hidden)
+        refreshInstalledApps()
+    }
+
     private fun discoverTvApps(): List<TvAppShortcut> {
         // QUERY_ALL_PACKAGES lets the launcher see installed apps even when they do not
         // publish a LEANBACK_LAUNCHER activity. Keep only packages Android can actually launch.
@@ -152,8 +182,12 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (::torrServe.isInitialized) {
-            installedApps.value = discoverTvApps()
+            refreshInstalledApps()
             numPermissionGranted.value = numCatalog.hasReadPermission()
+            if (refreshNumOnReturn) {
+                refreshNumOnReturn = false
+                if (searchQuery.value.isNotBlank()) searchAllSources()
+            }
         }
     }
 
@@ -172,14 +206,14 @@ class MainActivity : ComponentActivity() {
             try {
                 val torrServeTask = async { runCatching { torrServe.searchTorrents(query) } }
                 val lampaTask = async { runCatching { lampaSearch.search(query) } }
-                val numTask = async { runCatching { numCatalog.search(query) } }
+                val numTask = async { runCatching { numCatalog.searchWithStatus(query) } }
 
                 val torrentResult = torrServeTask.await()
                 val lampaResult = lampaTask.await()
                 val numResult = numTask.await()
                 val torrentMatches = torrentResult.getOrDefault(emptyList())
                 val lampaMatches = lampaResult.getOrDefault(emptyList())
-                val numMatches = numResult.getOrDefault(emptyList())
+                val numMatches = numResult.getOrNull()?.items.orEmpty()
                 searchResults.value = tv.polya.core.model.deduplicateMediaSearchResults(
                     torrentMatches + lampaMatches + numMatches,
                 )
@@ -194,9 +228,9 @@ class MainActivity : ComponentActivity() {
                     else -> "Lampa: ошибка"
                 }
                 val numStatus = when {
-                    !numPermissionGranted.value -> "NUM: нужно разрешение TV listings"
-                    numResult.isSuccess -> "NUM: ${numMatches.size}"
-                    else -> "NUM: ошибка чтения рекомендаций"
+                    !numPermissionGranted.value -> "NUM: нужно разрешение на рекомендации Android TV"
+                    numResult.isFailure -> "NUM: ошибка чтения системного каталога"
+                    else -> numResult.getOrNull()?.status ?: "NUM: каталог недоступен"
                 }
                 val total = searchResults.value.size
                 searchStatus.value = if (total == 0) {
@@ -244,6 +278,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun openNumForRefresh() {
+        val launchIntent = packageManager.getLeanbackLaunchIntentForPackage(NUM_PACKAGE)
+            ?: packageManager.getLaunchIntentForPackage(NUM_PACKAGE)
+        if (launchIntent == null) {
+            searchStatus.value = "Приложение NUM не установлено."
+            return
+        }
+        refreshNumOnReturn = true
+        runCatching { startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure {
+                refreshNumOnReturn = false
+                searchStatus.value = "Не удалось открыть NUM: ${it.message ?: it.javaClass.simpleName}"
+            }
+    }
+
     private fun requestNumSearchPermission() {
         if (numCatalog.hasReadPermission()) {
             numPermissionGranted.value = true
@@ -255,6 +304,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_SYSTEM_SEARCH_QUERY = "tv.polya.app.extra.SYSTEM_SEARCH_QUERY"
+        private const val NUM_PACKAGE = "ru.yourok.num"
     }
 
     private fun refreshTorrServe() {

@@ -17,25 +17,24 @@ import tv.polya.core.model.MediaSearchResult
  * names. Only rows that Android exposes to other apps, owned by ru.yourok.num and marked
  * searchable, are returned. The permission is optional and must be granted by the user.
  */
+data class NumCatalogSearchResult(val items: List<MediaSearchResult>, val status: String)
+
 class NumTvCatalogAdapter(context: Context) {
     private val appContext = context.applicationContext
 
     fun hasReadPermission(): Boolean =
         appContext.checkSelfPermission(READ_TV_LISTINGS) == PackageManager.PERMISSION_GRANTED
 
-    suspend fun search(query: String): List<MediaSearchResult> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String): List<MediaSearchResult> = searchWithStatus(query).items
+
+    suspend fun searchWithStatus(query: String): NumCatalogSearchResult = withContext(Dispatchers.IO) {
         val normalized = query.trim()
-        if (normalized.isBlank() || !hasReadPermission()) return@withContext emptyList()
+        if (normalized.isBlank()) return@withContext NumCatalogSearchResult(emptyList(), "NUM: введите запрос")
+        if (!hasReadPermission()) return@withContext NumCatalogSearchResult(emptyList(), "NUM: нет разрешения на чтение рекомендаций Android TV")
 
         val cursor = runCatching {
-            appContext.contentResolver.query(
-                TvContract.PreviewPrograms.CONTENT_URI,
-                PROJECTION,
-                null,
-                null,
-                null,
-            )
-        }.getOrNull() ?: return@withContext emptyList()
+            appContext.contentResolver.query(TvContract.PreviewPrograms.CONTENT_URI, PROJECTION, null, null, null)
+        }.getOrNull() ?: return@withContext NumCatalogSearchResult(emptyList(), "NUM: системный каталог рекомендаций недоступен")
 
         cursor.use { result ->
             val packageColumn = result.getColumnIndex(TvContract.BaseTvColumns.COLUMN_PACKAGE_NAME)
@@ -48,42 +47,42 @@ class NumTvCatalogAdapter(context: Context) {
             val contentIdColumn = result.getColumnIndex(TvContract.PreviewPrograms.COLUMN_CONTENT_ID)
 
             if (packageColumn < 0 || searchableColumn < 0 || titleColumn < 0 || intentColumn < 0) {
-                return@withContext emptyList()
+                return@use NumCatalogSearchResult(emptyList(), "NUM: системный каталог не вернул обязательные поля")
             }
 
+            var numRows = 0
+            var searchableRows = 0
             val unique = LinkedHashMap<String, MediaSearchResult>()
             while (result.moveToNext()) {
                 if (result.getString(packageColumn) != NUM_PACKAGE) continue
+                numRows++
                 if (result.getInt(searchableColumn) != 1) continue
-
+                searchableRows++
                 val title = result.getString(titleColumn).orEmpty().trim()
                 if (title.isBlank() || !title.contains(normalized, ignoreCase = true)) continue
 
                 val intentUri = result.getString(intentColumn).orEmpty().trim()
                 if (!isNumLaunchUri(intentUri)) continue
-
                 val rowId = result.getLong(result.getColumnIndexOrThrow(BaseColumns._ID))
                 val contentId = if (contentIdColumn >= 0) result.getString(contentIdColumn).orEmpty() else ""
                 val description = if (descriptionColumn >= 0) result.getString(descriptionColumn).orEmpty() else ""
-                val poster = when {
-                    posterColumn >= 0 -> result.getString(posterColumn)
-                    thumbnailColumn >= 0 -> result.getString(thumbnailColumn)
-                    else -> null
-                }
+                val poster = (if (posterColumn >= 0) result.getString(posterColumn) else null)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: (if (thumbnailColumn >= 0) result.getString(thumbnailColumn) else null)
 
-                val item = NumPreviewProgram(
-                    rowId = rowId,
-                    contentId = contentId,
-                    title = title,
-                    description = description,
-                    posterUri = poster,
-                    intentUri = intentUri,
-                    searchable = true,
-                ).toMediaSearchResult() ?: continue
-
+                val item = NumPreviewProgram(rowId, contentId, title, description, poster, intentUri, true)
+                    .toMediaSearchResult() ?: continue
                 unique.putIfAbsent(item.providerContentId, item)
             }
-            unique.values.take(MAX_RESULTS)
+
+            val items = unique.values.take(MAX_RESULTS)
+            val message = when {
+                numRows == 0 -> "NUM: карточек нет в системном каталоге. Откройте NUM для обновления рекомендаций."
+                searchableRows == 0 -> "NUM: системный каталог есть, но карточки не опубликованы для поиска."
+                items.isEmpty() -> "NUM: опубликовано карточек: $searchableRows, совпадений по запросу нет."
+                else -> "NUM: найдено ${items.size} из ${searchableRows} опубликованных карточек."
+            }
+            NumCatalogSearchResult(items, message)
         }
     }
 

@@ -21,6 +21,11 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Reuse debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: polya-debug-signing-v1
       - name: Unit tests
         run: ./gradlew testDebugUnitTest
       - name: Build debug APK

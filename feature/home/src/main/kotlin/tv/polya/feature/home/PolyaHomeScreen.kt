@@ -2,6 +2,7 @@ package tv.polya.feature.home
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.drawable.AdaptiveIconDrawable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -17,6 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -53,15 +57,18 @@ import androidx.tv.material3.Text
 import tv.polya.core.model.MediaContent
 import tv.polya.core.model.MediaSearchResult
 
-data class TvAppShortcut(val packageName: String, val label: String)
+data class TvAppShortcut(val packageName: String, val label: String, val favorite: Boolean = false, val hidden: Boolean = false)
 
-private enum class HomePage { HOME, SEARCH, SETTINGS }
+private enum class HomePage { HOME, APPS, SEARCH, SETTINGS }
 
 @Composable
 fun PolyaHomeScreen(
     items: List<MediaContent>,
     installedApps: List<TvAppShortcut>,
+    allInstalledApps: List<TvAppShortcut>,
     onAppSelected: (TvAppShortcut) -> Unit,
+    onToggleFavorite: (TvAppShortcut) -> Unit,
+    onToggleHidden: (TvAppShortcut) -> Unit,
     historyItems: List<MediaContent>,
     searchQuery: String,
     initialSearchQuery: String,
@@ -80,6 +87,7 @@ fun PolyaHomeScreen(
     onSaveAndRefresh: () -> Unit,
     onRefresh: () -> Unit,
     onItemSelected: (MediaContent) -> Unit,
+    onRefreshNum: () -> Unit,
 ) {
     var page by rememberSaveable { mutableStateOf(HomePage.HOME) }
     LaunchedEffect(initialSearchQuery) {
@@ -101,6 +109,8 @@ fun PolyaHomeScreen(
                 Spacer(Modifier.weight(1f))
                 NavItem("Главная", page == HomePage.HOME) { page = HomePage.HOME }
                 Spacer(Modifier.width(10.dp))
+                NavItem("Приложения", page == HomePage.APPS) { page = HomePage.APPS }
+                Spacer(Modifier.width(10.dp))
                 NavItem("Поиск", page == HomePage.SEARCH) { page = HomePage.SEARCH }
                 Spacer(Modifier.width(10.dp))
                 NavItem("Настройки", page == HomePage.SETTINGS) { page = HomePage.SETTINGS }
@@ -110,6 +120,7 @@ fun PolyaHomeScreen(
                     items, installedApps, onAppSelected, historyItems, connectionMessage, isRefreshing, onRefresh,
                     { page = HomePage.SETTINGS }, onItemSelected,
                 )
+                HomePage.APPS -> AppsContent(allInstalledApps, onAppSelected, onToggleFavorite, onToggleHidden)
                 HomePage.SEARCH -> SearchContent(
                     query = searchQuery,
                     results = searchResults,
@@ -121,7 +132,7 @@ fun PolyaHomeScreen(
                 )
                 HomePage.SETTINGS -> SettingsContent(
                     serverUrl, connectionMessage, isRefreshing, onServerUrlChange,
-                    onSaveAndRefresh, onRefresh, numPermissionGranted, onRequestNumPermission,
+                    onSaveAndRefresh, onRefresh, numPermissionGranted, onRequestNumPermission, onRefreshNum,
                 )
             }
         }
@@ -287,7 +298,7 @@ private fun SearchContent(
     onResultSelected: (MediaSearchResult) -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Поиск по TorrServe и Lampa", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Text("Поиск по TorrServe, Lampa и NUM", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Row(
             modifier = Modifier.fillMaxWidth(0.9f),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -395,12 +406,13 @@ private fun SettingsContent(
     onRefresh: () -> Unit,
     numPermissionGranted: Boolean,
     onRequestNumPermission: () -> Unit,
+    onRefreshNum: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(top = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text("Подключения", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Text("TorrServe MatriX", color = Color(0xFF70D6C2), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         Text(
-            "Введите адрес сервера в локальной сети вместе с портом. Например: http://192.168.1.20:8090",
+            "По умолчанию используется TorrServe на этом телевизоре (127.0.0.1:8090). Если сервер на другом устройстве, укажите его IP и порт.",
             color = Color(0xFF9BA8B6), fontSize = 14.sp,
         )
         Surface(
@@ -415,7 +427,7 @@ private fun SettingsContent(
                     singleLine = true,
                     textStyle = TextStyle(color = Color.White, fontSize = 17.sp),
                     decorationBox = { inner ->
-                        if (serverUrl.isBlank()) Text("http://адрес-телевизора:8090", color = Color(0xFF778494), fontSize = 17.sp)
+                        if (serverUrl.isBlank()) Text("http://127.0.0.1:8090", color = Color(0xFF778494), fontSize = 17.sp)
                         inner()
                     },
                 )
@@ -440,6 +452,8 @@ private fun SettingsContent(
             onRequestNumPermission,
             enabled = !numPermissionGranted,
         )
+        ActionSurface("Открыть NUM и обновить рекомендации", onRefreshNum)
+        Text("NUM публикует карточки через системный каталог Android TV. После обновления вернитесь сюда и повторите поиск.", color = Color(0xFF7F8B98), fontSize = 13.sp)
         Text("Lampa используется через её открытый поисковый provider.", color = Color(0xFF7F8B98), fontSize = 13.sp)
     }
 }
@@ -535,23 +549,27 @@ private fun TvAppCard(app: TvAppShortcut, focusRequester: FocusRequester?, onCli
             val appIcon = remember(app.packageName, context) {
                 runCatching {
                     val drawable = context.packageManager.getApplicationIcon(app.packageName)
+                    val adaptive = drawable is AdaptiveIconDrawable
                     val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
-                    drawable.setBounds(0, 0, 96, 96)
-                    drawable.draw(canvas)
-                    bitmap.asImageBitmap()
+                    val inset = if (adaptive) 0 else 12
+                    drawable.setBounds(inset, inset, 96 - inset, 96 - inset)
+                    drawable.draw(Canvas(bitmap))
+                    bitmap.asImageBitmap() to adaptive
                 }.getOrNull()
             }
             Box(
-                modifier = Modifier.width(58.dp).height(58.dp),
+                modifier = Modifier.width(58.dp).height(58.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFF35515A), Color(0xFF202B38))),
+                    RoundedCornerShape(16.dp),
+                ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (appIcon != null) {
                     Image(
-                        bitmap = appIcon,
+                        bitmap = appIcon.first,
                         contentDescription = app.label,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().then(if (appIcon.second) Modifier else Modifier.padding(7.dp)),
                     )
                 } else {
                     Text(app.label.take(1).uppercase(), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
@@ -587,3 +605,38 @@ private fun ActionSurface(label: String, onClick: () -> Unit, enabled: Boolean =
 
 private fun MediaSearchResult.displayTitle(): String =
     title.replace(Regex("^\\s*\\[(?:LAMPA|NUM)]\\s*", RegexOption.IGNORE_CASE), "").trim()
+
+
+@Composable
+private fun AppsContent(
+    apps: List<TvAppShortcut>,
+    onAppSelected: (TvAppShortcut) -> Unit,
+    onToggleFavorite: (TvAppShortcut) -> Unit,
+    onToggleHidden: (TvAppShortcut) -> Unit,
+) {
+    Column(Modifier.fillMaxSize().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text("Все приложения", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Text("Избранные показываются первыми на главном экране. Скрытые остаются в этом каталоге.", color = Color(0xFF9BA8B6), fontSize = 14.sp)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 28.dp),
+        ) {
+            items(apps, key = { app -> app.packageName }) { app ->
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    TvAppCard(app, null) { onAppSelected(app) }
+                    ActionSurface(
+                        label = if (app.favorite) "★ Убрать из избранного" else "☆ В избранное",
+                        onClick = { onToggleFavorite(app) },
+                    )
+                    ActionSurface(
+                        label = if (app.hidden) "Показать на главной" else "Скрыть с главной",
+                        onClick = { onToggleHidden(app) },
+                    )
+                }
+            }
+        }
+    }
+}
