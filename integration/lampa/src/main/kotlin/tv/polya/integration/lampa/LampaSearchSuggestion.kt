@@ -27,8 +27,23 @@ fun LampaSearchSuggestion.toMediaSearchResult(): MediaSearchResult? {
         magnetUri = "",
         providerContentId = id,
         sourceId = "lampa",
-        posterUrl = posterUrl?.trim()?.takeIf { it.isNotBlank() },
+        posterUrl = normalizeLampaPosterUrl(posterUrl),
         description = description.trim().takeIf { it.isNotBlank() },
         launchType = type,
     )
+}
+
+
+/**
+ * Lampa's searchable provider returns TMDB poster paths, not necessarily full URLs.
+ * Its default TMDB image base is image.tmdb.org; preserve absolute/custom URLs as-is.
+ */
+fun normalizeLampaPosterUrl(reference: String?): String? {
+    val value = reference?.trim().orEmpty()
+    if (value.isBlank()) return null
+    if (value.startsWith("https://", ignoreCase = true) ||
+        value.startsWith("http://", ignoreCase = true)
+    ) return value
+    if (value.startsWith("/")) return "https://image.tmdb.org/t/p/original$value"
+    return null
 }
