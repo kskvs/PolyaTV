@@ -47,11 +47,15 @@ import androidx.tv.material3.Text
 import tv.polya.core.model.MediaContent
 import tv.polya.core.model.MediaSearchResult
 
+data class TvAppShortcut(val packageName: String, val label: String)
+
 private enum class HomePage { HOME, SEARCH, SETTINGS }
 
 @Composable
 fun PolyaHomeScreen(
     items: List<MediaContent>,
+    installedApps: List<TvAppShortcut>,
+    onAppSelected: (TvAppShortcut) -> Unit,
     historyItems: List<MediaContent>,
     searchQuery: String,
     searchResults: List<MediaSearchResult>,
@@ -88,7 +92,7 @@ fun PolyaHomeScreen(
             }
             when (page) {
                 HomePage.HOME -> HomeContent(
-                    items, historyItems, connectionMessage, isRefreshing, onRefresh,
+                    items, installedApps, onAppSelected, historyItems, connectionMessage, isRefreshing, onRefresh,
                     { page = HomePage.SETTINGS }, onItemSelected,
                 )
                 HomePage.SEARCH -> SearchContent(
@@ -112,6 +116,8 @@ fun PolyaHomeScreen(
 @Composable
 private fun HomeContent(
     items: List<MediaContent>,
+    installedApps: List<TvAppShortcut>,
+    onAppSelected: (TvAppShortcut) -> Unit,
     historyItems: List<MediaContent>,
     connectionMessage: String,
     isRefreshing: Boolean,
@@ -224,6 +230,24 @@ private fun HomeContent(
                         color = Color(0xFF98A4B2), fontSize = 14.sp,
                     )
                     ActionSurface("Настроить TorrServe", onOpenSettings)
+                }
+            }
+        }
+
+        if (installedApps.isNotEmpty()) {
+            item(key = "apps-title") {
+                Text("Приложения", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+            }
+            item(key = "apps-shelf") {
+                val firstAppFocus = remember { FocusRequester() }
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().focusRestorer(firstAppFocus).focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                ) {
+                    itemsIndexed(installedApps, key = { _, app -> app.packageName }) { index, app ->
+                        TvAppCard(app, if (index == 0) firstAppFocus else null) { onAppSelected(app) }
+                    }
                 }
             }
         }
@@ -436,6 +460,47 @@ private fun MediaCard(item: MediaContent, focusRequester: FocusRequester?, onCli
                 }
             }
             Text(item.title, color = Color.White, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp))
+        }
+    }
+}
+
+
+@Composable
+private fun TvAppCard(app: TvAppShortcut, focusRequester: FocusRequester?, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.width(116.dp).then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color(0xFF1B2732),
+            focusedContainerColor = Color(0xFF2A414B),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            Box(
+                modifier = Modifier.width(58.dp).height(58.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFF3A6265), Color(0xFF253747))),
+                    RoundedCornerShape(16.dp),
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(app.label.take(1).uppercase(), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            }
+            Text(
+                app.label,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                minLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
         }
     }
 }

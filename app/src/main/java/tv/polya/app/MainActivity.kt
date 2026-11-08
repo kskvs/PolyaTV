@@ -1,6 +1,8 @@
 package tv.polya.app
 
 import android.os.Bundle
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +13,7 @@ import tv.polya.core.model.ContentType
 import tv.polya.core.model.MediaContent
 import tv.polya.core.model.MediaSearchResult
 import tv.polya.feature.home.PolyaHomeScreen
+import tv.polya.feature.home.TvAppShortcut
 import tv.polya.integration.torrserve.TorrServeChooserLauncher
 import tv.polya.integration.torrserve.TorrServeEntry
 import tv.polya.integration.torrserve.TorrServeHistoryEntry
@@ -28,18 +31,22 @@ class MainActivity : ComponentActivity() {
     private val isSearching = mutableStateOf(false)
     private val status = mutableStateOf("Введите адрес TorrServe в настройках и проверьте соединение.")
     private val isRefreshing = mutableStateOf(false)
+    private val installedApps = mutableStateOf<List<TvAppShortcut>>(emptyList())
     private val chooserLauncher = TorrServeChooserLauncher()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         torrServe = TorrServeRepository(applicationContext)
         serverUrl.value = torrServe.serverUrl()
+        installedApps.value = discoverTvApps()
         items.value = torrServe.cachedEntries().map { it.toMediaContent(serverUrl.value) }
         historyItems.value = mapHistory(torrServe.cachedHistory(), torrServe.cachedEntries(), serverUrl.value)
 
         setContent {
             PolyaHomeScreen(
                 items = items.value,
+                installedApps = installedApps.value,
+                onAppSelected = ::launchTvApp,
                 historyItems = historyItems.value,
                 searchQuery = searchQuery.value,
                 searchResults = searchResults.value,
@@ -70,6 +77,47 @@ class MainActivity : ComponentActivity() {
             )
         }
         if (serverUrl.value.isNotBlank()) refreshTorrServe()
+    }
+
+
+    private fun discoverTvApps(): List<TvAppShortcut> {
+        val found = LinkedHashMap<String, TvAppShortcut>()
+        val categories = listOf(
+            Intent.CATEGORY_LEANBACK_LAUNCHER,
+            Intent.CATEGORY_LAUNCHER,
+        )
+        categories.forEach { category ->
+            val query = Intent(Intent.ACTION_MAIN).addCategory(category)
+            @Suppress("DEPRECATION")
+            val matches = packageManager.queryIntentActivities(query, PackageManager.MATCH_DEFAULT_ONLY)
+            matches.forEach { resolveInfo ->
+                val packageName = resolveInfo.activityInfo?.packageName ?: return@forEach
+                if (packageName == this.packageName || found.containsKey(packageName)) return@forEach
+                val label = resolveInfo.loadLabel(packageManager)?.toString()?.trim().orEmpty()
+                if (label.isNotBlank()) {
+                    found[packageName] = TvAppShortcut(packageName = packageName, label = label)
+                }
+            }
+        }
+        return found.values.sortedBy { it.label.lowercase() }
+    }
+
+    private fun launchTvApp(shortcut: TvAppShortcut) {
+        val launchIntent = packageManager.getLeanbackLaunchIntentForPackage(shortcut.packageName)
+            ?: packageManager.getLaunchIntentForPackage(shortcut.packageName)
+        if (launchIntent == null) {
+            Toast.makeText(this, "Не удалось запустить ${shortcut.label}", Toast.LENGTH_SHORT).show()
+            return
+        }
+        runCatching { startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure {
+                Toast.makeText(this, "Ошибка запуска ${shortcut.label}: ${it.message}", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::torrServe.isInitialized) installedApps.value = discoverTvApps()
     }
 
     private fun searchTorrServe() {
