@@ -86,13 +86,13 @@ class MainActivity : ComponentActivity() {
             Intent.CATEGORY_LEANBACK_LAUNCHER,
             Intent.CATEGORY_LAUNCHER,
         )
-        categories.forEach { category ->
+        categories.forEach categoryLoop@ { category ->
             val query = Intent(Intent.ACTION_MAIN).addCategory(category)
             @Suppress("DEPRECATION")
             val matches = packageManager.queryIntentActivities(query, PackageManager.MATCH_DEFAULT_ONLY)
-            matches.forEach { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@forEach
-                if (packageName == this.packageName || found.containsKey(packageName)) return@forEach
+            matches.forEach matchLoop@ { resolveInfo ->
+                val packageName = resolveInfo.activityInfo?.packageName ?: return@matchLoop
+                if (packageName == this.packageName || found.containsKey(packageName)) return@matchLoop
                 val label = resolveInfo.loadLabel(packageManager)?.toString()?.trim().orEmpty()
                 if (label.isNotBlank()) {
                     found[packageName] = TvAppShortcut(packageName = packageName, label = label)
