@@ -3,12 +3,12 @@
 ## TorrServe
 TorrServe — основной playback target. Его адаптер изолирован собственным контрактом.
 
-**Критическое правило:** после выбора контента открыть штатный chooser TorrServe MatriX (выбор файла/эпизода). Не использовать прямой play-flow, если он пропускает chooser. Не создавать его замену.
+**Критическое правило:** передавать запуск в штатный TorrServe MatriX через `action=play`. MatriX сам выбирает поведение: один playable-файл запускается сразу, несколько файлов открывают штатный список файлов/серий. Не показывать промежуточное меню PolyaTV и не вызывать принудительный `action=choose`.
 
 До production-кода проверить:
 - фактические HTTP API и ответы;
 - различия версий MatriX;
-- способ открыть штатный chooser (intent/deep link/API/совместимый протокол);
+- поведение запуска для single-file и multi-file торрентов;
 - формат ID и launch reference от Lampa/NUM;
 - доступность истории и прогресса;
 - поведение при недоступном TorrServe.
@@ -21,7 +21,7 @@ Lampa's exported Android TV search provider is queried through `content://top.ro
 
 ## MatriX search
 
-MatriX.134 client uses GET `/search?query=...` and returns tracker results with title, magnet link, info hash, year, size, tracker and seed count. PolyaTV displays those matches without adding them to the server. Only after explicit user selection does it POST `/torrents` with action `add` and the chosen magnet, then opens the standard chooser using the returned torrent hash. This avoids silently adding every search result.
+MatriX.134 client uses GET `/search?query=...` and returns tracker results with title, magnet link, info hash, year, size, tracker and seed count. PolyaTV displays those matches without adding them to the server. Only after explicit user selection does it POST `/torrents` with action `add` and the chosen magnet, then starts the returned torrent through the native MatriX `action=play` path. This avoids silently adding every search result.
 
 ## Lampa и NUM
 Каждый источник имеет независимый адаптер для discovery/search, карточек, метаданных/изображений и launch reference. Не предполагать одинаковые API или полноту данных. Сохранять исходный launch payload безопасно; не показывать и не писать чувствительные данные в логи.
@@ -31,7 +31,7 @@ MatriX.134 client uses GET `/search?query=...` and returns tracker results with 
 - Официальный Android-клиент LAMPA (application ID `top.rootu.lampa`) публикует экспортированный поисковый ContentProvider `top.rootu.lampa.atvsearch`. Адаптер PolyaTV запрашивает его через Android ContentResolver и получает TMDB-сущности. Выбор результата передаётся в Lampa как `GLOBALSEARCH` с TMDB ID и типом `movie/tv`. Это открывает карточку внутри Lampa, но **не выдаёт torrent hash и не открывает TorrServe chooser напрямую**: пользователь продолжает штатный сценарий Lampa, который может передать выбранный torrent в TorrServe.
 - NUM (пакет, указанный в публичной теме приложения: `ru.yourok.num`) описывается как Android TV приложение с каналами/рекомендациями и системным голосовым поиском. Публичный стабильный контракт прямого чтения его результатов PolyaTV пока не подтверждён. Не читать его приватную БД и не считать внутренние компоненты API без проверки на устройстве.
 
-Перед включением любого адаптера определить установленный вариант приложения, проверить exported provider/activity и проверить полный путь до chooser MatriX 134 на реальном ТВ.
+Перед включением любого адаптера определить установленный вариант приложения, проверить exported provider/activity и проверить полный путь до запуска MatriX 134 на реальном ТВ.
 
 
 ## NUM Android TV recommendations
@@ -48,7 +48,7 @@ This adapter is **capability-based**: if NUM does not publish searchable preview
 
 ## Android TV system search
 
-PolyaTV declares its own searchable ContentProvider and `searchable.xml`. The provider returns only the cached TorrServe catalog (no network requests while the system search dialog is typing). Selecting a result opens the standard TorrServe chooser. Submitting a search query without selecting a suggestion opens PolyaTV's in-app search screen.
+PolyaTV declares its own searchable ContentProvider and `searchable.xml`. The provider returns only the cached TorrServe catalog (no network requests while the system search dialog is typing). Selecting a result hands playback to the native MatriX `action=play` path. Submitting a search query without selecting a suggestion opens PolyaTV's in-app search screen.
 
 The Android TV framework can query third-party searchable providers, but the TV manufacturer's launcher controls whether it displays those results and how its physical Search key is routed. This integration does not replace the system search UI or guarantee that a Philips firmware build includes third-party suggestions.
 
