@@ -13,6 +13,7 @@ import tv.polya.feature.home.PolyaHomeScreen
 import tv.polya.integration.torrserve.TorrServeChooserLauncher
 import tv.polya.integration.torrserve.TorrServeEntry
 import tv.polya.integration.torrserve.TorrServeRepository
+import tv.polya.integration.torrserve.resolvePosterUrl
 
 class MainActivity : ComponentActivity() {
     private lateinit var torrServe: TorrServeRepository
@@ -75,6 +76,6 @@ private fun TorrServeEntry.toMediaContent() = MediaContent(
     title = title,
     sourceId = "torrserve",
     sourceContentId = hash,
-    posterUrl = poster.takeIf { it.isNotBlank() },
+    posterUrl = resolvePosterUrl(serverUrl, poster),
     contentType = ContentType.UNKNOWN,
 )
