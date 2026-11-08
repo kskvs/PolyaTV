@@ -37,6 +37,19 @@ class LampaSearchSuggestionTest {
         assertEquals(2011, result?.year)
     }
 
+    @Test fun relativePosterPathsAreResolvedAgainstTmdbImageHost() {
+        assertEquals(
+            "https://image.tmdb.org/t/p/original/backdrop.jpg",
+            normalizeLampaPosterUrl("/backdrop.jpg"),
+        )
+        assertEquals(
+            "https://cdn.example/poster.jpg",
+            normalizeLampaPosterUrl("https://cdn.example/poster.jpg"),
+        )
+        assertNull(normalizeLampaPosterUrl("android.resource://top.rootu.lampa/drawable/empty_poster"))
+        assertNull(normalizeLampaPosterUrl(" "))
+    }
+
     @Test fun invalidIdsAndMediaTypesAreRejected() {
         assertNull(LampaSearchSuggestion("0", "movie", "Film", "", null).toMediaSearchResult())
         assertNull(LampaSearchSuggestion("42", "person", "Actor", "", null).toMediaSearchResult())
