@@ -1,25 +1,24 @@
 # PolyaTV
 
-Самостоятельный Android TV launcher и медиахаб с единым кинотеатральным интерфейсом.
+Самостоятельный Android TV launcher/медиахаб. CleanMyTV2 не является основой приложения и используется только для аудита отдельных технических контрактов.
 
-Проект создаётся с нуля. CleanMyTV2 используется только как источник технических идей и проверенных протоколов; его UI и архитектура не являются основой PolyaTV.
+## Первая реализация
+- многомодульная основа Android TV;
+- Kotlin + Jetpack Compose for TV;
+- домашний экран с D-pad навигацией, базовой системой фокуса и экраном подключений;
+- TorrServe MatriX adapter: POST `/torrents` с `action=list`, last-known-good cache и защита карточек от временного исчезновения;
+- запуск стандартного TorrServe chooser через `action=choose`;
+- GitHub Actions: unit tests и сборка debug APK.
 
-## Цели
-- Кинотеатральный главный экран: hero-баннер и горизонтальные ряды постеров.
-- Единая витрина TorrServe, Lampa и NUM.
-- При выборе фильма/сериала открывать штатный chooser TorrServe MatriX для выбора файла или серии. Не запускать воспроизведение напрямую и не вставлять свой экран деталей.
-- История и продолжение просмотра — в пределах реально доступных playback-данных.
-- Глобальный поиск, расширенная настройка секций и интерфейса.
-- Плавная D-pad-навигация без дрожания и потери фокуса.
-- Отдельный Windows Companion.
+Lampa, NUM, общий поиск и полноценный каталог постеров пока не реализованы.
 
-## Документы
-- [Product requirements](docs/PRODUCT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Integrations and playback](docs/INTEGRATIONS.md)
-- [UX and navigation](docs/UX.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Decisions](docs/DECISIONS.md)
+## Сборка Windows
+Требуются JDK 17 и Android SDK Platform 37:
+```powershell
+.\gradlew.bat testDebugUnitTest
+.\gradlew.bat assembleDebug
+```
+APK: `app\build\outputs\apk\debug\app-debug.apk`.
 
-## Статус
-Этап архитектурного проектирования и технической проверки интеграций.
+## Подключение TorrServe
+PolyaTV → Настройки → укажите адрес сервера (например `http://192.168.1.20:8090`) → «Сохранить и проверить». Нажатие на карточку передаёт управление штатному chooser TorrServe. Подробности: [docs/TORRSERVE_CHOOSER.md](docs/TORRSERVE_CHOOSER.md).
