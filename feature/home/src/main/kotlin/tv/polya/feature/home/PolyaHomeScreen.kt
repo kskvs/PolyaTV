@@ -354,20 +354,19 @@ private fun SearchResultCard(result: MediaSearchResult, onClick: () -> Unit) {
                 if (!poster.isNullOrBlank()) {
                     AsyncImage(
                         model = poster,
-                        contentDescription = result.title,
+                        contentDescription = result.displayTitle(),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                    Text(result.title.take(1).uppercase(), color = Color(0xFFDAE8E8), fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text(result.displayTitle().take(1).uppercase(), color = Color(0xFFDAE8E8), fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(result.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(result.displayTitle(), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val details = result.description ?: listOfNotNull(
                     result.year.takeIf { it > 0 }?.toString(),
                     result.sizeLabel.takeIf { it.isNotBlank() },
-                    result.providerLabel.takeIf { it.isNotBlank() },
                     result.seedCount.takeIf { it > 0 }?.let { "сидов: $it" },
                 ).joinToString(" · ")
                 Text(details, color = Color(0xFF9BA8B6), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -544,10 +543,7 @@ private fun TvAppCard(app: TvAppShortcut, focusRequester: FocusRequester?, onCli
                 }.getOrNull()
             }
             Box(
-                modifier = Modifier.width(58.dp).height(58.dp).background(
-                    Brush.linearGradient(listOf(Color(0xFF3A6265), Color(0xFF253747))),
-                    RoundedCornerShape(16.dp),
-                ),
+                modifier = Modifier.width(58.dp).height(58.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 if (appIcon != null) {
@@ -555,7 +551,7 @@ private fun TvAppCard(app: TvAppShortcut, focusRequester: FocusRequester?, onCli
                         bitmap = appIcon,
                         contentDescription = app.label,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(7.dp),
+                        modifier = Modifier.fillMaxSize(),
                     )
                 } else {
                     Text(app.label.take(1).uppercase(), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
@@ -587,3 +583,7 @@ private fun ActionSurface(label: String, onClick: () -> Unit, enabled: Boolean =
         Text(label, color = if (enabled) Color.White else Color(0xFF78838D), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 13.dp))
     }
 }
+
+
+private fun MediaSearchResult.displayTitle(): String =
+    title.replace(Regex("^\\s*\\[(?:LAMPA|NUM)]\\s*", RegexOption.IGNORE_CASE), "").trim()
