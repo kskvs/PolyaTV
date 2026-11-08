@@ -113,25 +113,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun discoverTvApps(): List<TvAppShortcut> {
-        val found = LinkedHashMap<String, TvAppShortcut>()
-        val categories = listOf(
-            Intent.CATEGORY_LEANBACK_LAUNCHER,
-            Intent.CATEGORY_LAUNCHER,
-        )
-        categories.forEach categoryLoop@ { category ->
-            val query = Intent(Intent.ACTION_MAIN).addCategory(category)
-            @Suppress("DEPRECATION")
-            val matches = packageManager.queryIntentActivities(query, PackageManager.MATCH_DEFAULT_ONLY)
-            matches.forEach matchLoop@ { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@matchLoop
-                if (packageName == this.packageName || found.containsKey(packageName)) return@matchLoop
-                val label = resolveInfo.loadLabel(packageManager)?.toString()?.trim().orEmpty()
-                if (label.isNotBlank()) {
-                    found[packageName] = TvAppShortcut(packageName = packageName, label = label)
-                }
+        // QUERY_ALL_PACKAGES lets the launcher see installed apps even when they do not
+        // publish a LEANBACK_LAUNCHER activity. Keep only packages Android can actually launch.
+        @Suppress("DEPRECATION")
+        val applications = packageManager.getInstalledApplications(PackageManager.MATCH_ALL)
+        return applications.asSequence()
+            .filter { it.packageName != packageName }
+            .mapNotNull { application ->
+                val launchIntent = packageManager.getLeanbackLaunchIntentForPackage(application.packageName)
+                    ?: packageManager.getLaunchIntentForPackage(application.packageName)
+                    ?: return@mapNotNull null
+                val label = runCatching { packageManager.getApplicationLabel(application).toString().trim() }
+                    .getOrDefault("")
+                if (label.isBlank()) return@mapNotNull null
+                TvAppShortcut(packageName = application.packageName, label = label)
             }
-        }
-        return found.values.sortedBy { it.label.lowercase() }
+            .distinctBy { it.packageName }
+            .sortedBy { it.label.lowercase() }
+            .toList()
     }
 
     private fun launchTvApp(shortcut: TvAppShortcut) {
