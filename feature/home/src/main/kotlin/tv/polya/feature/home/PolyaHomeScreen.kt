@@ -365,7 +365,12 @@ private fun SearchResultCard(result: MediaSearchResult, onClick: () -> Unit) {
                 ).joinToString(" · ")
                 Text(details, color = Color(0xFF9BA8B6), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text("Добавить\nи выбрать", color = Color(0xFF80D9C7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(
+                if (result.sourceId == "lampa") "Открыть\nв Lampa" else "Добавить\nи выбрать",
+                color = Color(0xFF80D9C7),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

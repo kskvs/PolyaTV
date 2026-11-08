@@ -129,6 +129,7 @@ class TorrServeRepository(context: Context) {
      * then return its actual server hash so the caller can open the native file chooser.
      */
     suspend fun addSearchResult(result: MediaSearchResult): TorrServeEntry = withContext(Dispatchers.IO) {
+        require(result.sourceId == "torrserve") { "Этот результат должен запускаться через свой источник: ${result.sourceId}" }
         val base = serverUrl().trim().trimEnd('/')
         val existing = cachedEntries().firstOrNull {
             (result.providerContentId.isNotBlank() && it.hash.equals(result.providerContentId, ignoreCase = true))

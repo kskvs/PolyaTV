@@ -37,9 +37,11 @@ fun deduplicateMediaSearchResults(results: List<MediaSearchResult>): List<MediaS
     results.asSequence()
         .filter {
             it.title.isNotBlank() &&
-                (it.sourceId == "torrserve"
-                    ? it.magnetUri.isNotBlank()
-                    : it.providerContentId.isNotBlank())
+                if (it.sourceId == "torrserve") {
+                    it.magnetUri.isNotBlank()
+                } else {
+                    it.providerContentId.isNotBlank()
+                }
         }
         .distinctBy {
             val stableId = it.providerContentId.trim().lowercase()
