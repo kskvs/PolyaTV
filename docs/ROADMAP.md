@@ -26,7 +26,7 @@
 - [x] Внутренний поиск TorrServe и Android TV system-search provider для локального кэша.
 
 ## Phase 3 — Playback
-- [x] TorrServe integration со штатным chooser по подтверждённому `action=choose` контракту; реальная проверка на Philips ещё нужна.
+- [x] MatriX playback через `action=play`: один файл запускается сразу, несколько открывают штатный список файлов/серий; проверка на Philips ещё нужна.
 - [ ] Source launch references для Lampa/NUM.
 - [ ] Проверка запуска на Philips TV.
 - [x] Первичная история просмотренных файлов через MatriX `/viewed` с локальным журналом наблюдений.
