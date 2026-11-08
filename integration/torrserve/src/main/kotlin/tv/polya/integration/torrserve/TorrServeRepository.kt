@@ -163,29 +163,27 @@ class TorrServeRepository(context: Context) {
 
     private fun parseSearchResults(json: String): List<TorrServeSearchResult> {
         val array = JSONArray(json)
-        val unique = LinkedHashMap<String, TorrServeSearchResult>()
-        for (index in 0 until array.length()) {
-            val item = array.optJSONObject(index) ?: continue
-            val title = item.optString("Title").trim().ifBlank { item.optString("Name").trim() }
-            val magnet = item.optString("Magnet").trim()
-            val hash = item.optString("Hash").trim().lowercase()
-            if (title.isBlank() || magnet.isBlank()) continue
-            val key = hash.ifBlank { magnet }
-            unique.putIfAbsent(
-                key,
-                TorrServeSearchResult(
-                    title = title,
-                    torrentName = item.optString("Name").trim(),
-                    tracker = item.optString("Tracker").trim(),
-                    year = item.optInt("Year", 0),
-                    size = item.optString("Size").trim(),
-                    seeders = item.optInt("Seed", 0),
-                    magnet = magnet,
-                    hash = hash,
-                ),
-            )
+        val parsed = buildList {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val title = item.optString("Title").trim().ifBlank { item.optString("Name").trim() }
+                val magnet = item.optString("Magnet").trim()
+                if (title.isBlank() || magnet.isBlank()) continue
+                add(
+                    TorrServeSearchResult(
+                        title = title,
+                        torrentName = item.optString("Name").trim(),
+                        tracker = item.optString("Tracker").trim(),
+                        year = item.optInt("Year", 0),
+                        size = item.optString("Size").trim(),
+                        seeders = item.optInt("Seed", 0),
+                        magnet = magnet,
+                        hash = item.optString("Hash").trim().lowercase(),
+                    ),
+                )
+            }
         }
-        return unique.values.toList()
+        return deduplicateTorrServeSearchResults(parsed)
     }
 
     private fun postJson(base: String, path: String, body: String): String {

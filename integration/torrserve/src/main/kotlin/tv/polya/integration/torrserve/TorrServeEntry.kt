@@ -134,3 +134,12 @@ data class TorrServeSearchResult(
     val magnet: String,
     val hash: String,
 )
+
+/** Deduplicate tracker search matches while preserving the provider result order. */
+fun deduplicateTorrServeSearchResults(
+    results: List<TorrServeSearchResult>,
+): List<TorrServeSearchResult> = results
+    .asSequence()
+    .filter { it.title.isNotBlank() && it.magnet.isNotBlank() }
+    .distinctBy { it.hash.trim().lowercase().ifBlank { it.magnet.trim() } }
+    .toList()

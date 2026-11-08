@@ -15,6 +15,10 @@ TorrServe — основной playback target. Его адаптер изоли
 
 Собрать fixtures и контрактные тесты. Не выводить API из имён методов или предположений.
 
+## MatriX search
+
+MatriX.134 client uses GET `/search?query=...` and returns tracker results with title, magnet link, info hash, year, size, tracker and seed count. PolyaTV displays those matches without adding them to the server. Only after explicit user selection does it POST `/torrents` with action `add` and the chosen magnet, then opens the standard chooser using the returned torrent hash. This avoids silently adding every search result.
+
 ## Lampa и NUM
 Каждый источник имеет независимый адаптер для discovery/search, карточек, метаданных/изображений и launch reference. Не предполагать одинаковые API или полноту данных. Сохранять исходный launch payload безопасно; не показывать и не писать чувствительные данные в логи.
 
