@@ -84,6 +84,8 @@ class TorrServeRepository(context: Context) {
                     title = title,
                     poster = item.optString("poster").trim(),
                     timestamp = item.optLong("timestamp", 0L),
+                    lastViewedAt = item.optLong("lastViewedAt", item.optLong("last_viewed_at", 0L)),
+                    missingPolls = item.optInt("missingPolls", item.optInt("missing_polls", 0)).coerceAtLeast(0),
                 ),
             )
         }
