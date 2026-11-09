@@ -3,24 +3,29 @@
 ## ADR-001: Standalone product
 **Status:** Accepted
 
-PolyaTV is developed in its own repository and does not use CleanMyTV2 as its application base. CleanMyTV2 may be inspected for reusable technical knowledge/components only after license, compatibility and security review.
+PolyaTV is developed in its own repository. CleanMyTV2 is not the application base. Any reuse requires separate license, compatibility and security review.
 
-## ADR-002: Android TV UI
-**Status:** Proposed
+## ADR-002: Arc Launcher as application base
+**Status:** Accepted; implementation belongs to the foundation stage
 
-Use Kotlin and Jetpack Compose for TV. Keep source adapters and data access outside composable UI.
+Use [Arc Launcher](https://github.com/meddouribadis/arclauncher/) as the Flutter/Dart base, preserving upstream history and GPL-3.0 license. Record Arc/its LTvLauncher and FLauncher lineage in README and notices when the fork is made. Keep new integrations in separate modules to ease upstream updates. This decision replaces the previous proposed Kotlin/Compose-from-scratch direction; the fork has not been completed by the stage 0 audit.
 
-## ADR-003: Preserve standard TorrServe chooser
+## ADR-003: Do not auto-start playback from PolyaTV
 **Status:** Accepted
 
-Selecting movie/series content must open the standard TorrServe MatriX chooser. Do not auto-start playback or interpose a custom details screen.
+Selecting a movie or series must not silently start playback or show a PolyaTV details screen. The target is the native TorrServe MatriX file/episode selection UI. If MatriX cannot expose that flow safely for a selected item, do not label `action=play` as a chooser: source code shows that a single playable file can start immediately. This requirement remains open for implementation pending a verified external contract or an explicit product-level alternative.
 
 ## ADR-004: Independent source adapters
 **Status:** Accepted
 
-TorrServe, Lampa and NUM are independent integrations. Unified content is normalized above the adapters.
+TorrServe, Lampa and NUM are separate sources. Normalize data above their adapters. A source-specific ID or UI route is not assumed to be a TorrServe hash or launch reference.
 
 ## ADR-005: Windows Companion is separate
 **Status:** Proposed
 
-Windows Companion has its own lifecycle and release process. It may reuse/refactor independently verified CleanMyTV desktop tooling, but must be localized and adapted to PolyaTV contracts.
+Windows Companion has its own lifecycle and release process. It starts only after the stable storefront milestones and explicit agreement.
+
+## ADR-006: Evidence before integration claims
+**Status:** Accepted
+
+Mark integration facts as verified only when backed by primary documentation/source or a reproducible request/app test. Label untested device behavior as a hypothesis. Do not infer a NUM API from Android TV capabilities or a TorrServe chooser from an Activity being exported. When the needed data or launch contract is unavailable, document the limitation and an honest fallback before implementation.
