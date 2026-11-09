@@ -1,26 +1,37 @@
 # PolyaTV
 
-Самостоятельный Android TV launcher/медиахаб. CleanMyTV2 не является основой приложения и используется только для аудита отдельных технических контрактов.
+PolyaTV развивается как Android TV лаунчер с единой кинотеатральной витриной. На текущем этапе в качестве основы используется Arc Launcher; интеграции TorrServe, Lampa и NUM ещё проходят техническую проверку и не должны считаться готовыми только потому, что лаунчерная основа уже работает.
 
-## Уже реализовано
-- многомодульная основа Android TV на Kotlin + Jetpack Compose for TV;
-- домашний экран с D-pad навигацией и списком установленных ТВ-приложений;
-- TorrServe MatriX adapter: список, постеры, last-known-good cache и устойчивость к кратковременно пропадающим карточкам;
-- история по MatriX `/viewed` с локальным кэшем отметок;
-- поиск TorrServe, Lampa и системных рекомендаций NUM (если NUM публикует searchable preview rows); torrent добавляется только после выбора, результаты Lampa/NUM открываются в исходном приложении;
-- системный Android TV Search provider для поиска по уже сохранённой медиатеке TorrServe;
-- открытие стандартного TorrServe chooser через `action=choose`;
-- GitHub Actions: unit tests и сборка debug APK.
+## Основа и лицензия
 
-NUM читается через публичный Android TV TV Provider с отдельным разрешением READ_TV_LISTINGS; если NUM не публикует searchable rows, источник покажет ноль результатов. Системный Android TV Search provider по-прежнему выдаёт только кэш TorrServe; внутренний экран поиска обращается к TorrServe и экспортированному provider Lampa.
+Приложение основано на [Arc Launcher](https://github.com/meddouribadis/arclauncher/), форке [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher/), который восходит к [FLauncher](https://gitlab.com/flauncher/flauncher). История Arc сохранена в Git и объединена с историей PolyaTV отдельным merge-коммитом. Файл [LICENSE](LICENSE) содержит GNU GPL v3; изменения и распространяемые сборки должны соблюдать условия лицензии. Авторские заголовки исходников сохранены.
 
-## Сборка Windows
-Требуются JDK 17 и Android SDK Platform 37:
+Новые интеграции PolyaTV следует держать в отдельных модулях, чтобы поддерживать обновления Arc. Документы о продукте, архитектуре и проверке источников находятся в [docs/](docs/).
+
+## Текущее состояние
+
+Arc предоставляет базовый Android TV домашний экран, сетку приложений, категории, навигацию пультом, настройки, обои и Watch Next. Конкретные версии приложения и поведение на Philips 50PUS8057/60 ещё требуют проверки после сборки PolyaTV.
+
+Интеграции медиакаталогов не завершены. В частности, прямой запуск нативного выбора файла TorrServe MatriX без риска автозапуска одного файла не подтверждён. Проверенные факты и ограничения записаны в [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+
+## Сборка и проверки
+
+Текущий источник фиксирует Flutter 3.41.9 и Dart 3.11 в `.fvmrc` и `pubspec.yaml`. Установите соответствующую версию Flutter и Android SDK, затем выполните из корня репозитория:
+
 ```powershell
-.\gradlew.bat testDebugUnitTest
-.\gradlew.bat assembleDebug
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --debug
 ```
-APK: `app\build\outputs\apk\debug\app-debug.apk`.
 
-## Подключение TorrServe
-PolyaTV → Настройки → укажите адрес сервера (например `http://192.168.1.20:8090`) → «Сохранить и проверить». Нажатие на карточку передаёт управление штатному chooser TorrServe. Подробности: [docs/TORRSERVE_CHOOSER.md](docs/TORRSERVE_CHOOSER.md).
+Сборка debug APK: `build/app/outputs/flutter-apk/app-debug.apk`.
+
+## Проектные документы
+
+- [PRODUCT](docs/PRODUCT.md)
+- [ARCHITECTURE](docs/ARCHITECTURE.md)
+- [INTEGRATIONS](docs/INTEGRATIONS.md)
+- [UX](docs/UX.md)
+- [ROADMAP](docs/ROADMAP.md)
+- [DECISIONS](docs/DECISIONS.md)
