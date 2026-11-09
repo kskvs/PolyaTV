@@ -269,7 +269,7 @@ class RedditSlideshow {
   /// Pause applied after a 429 that doesn't say when to retry.
   static const Duration defaultRateLimitBackoff = Duration(seconds: 60);
 
-  static const String userAgent = 'android:com.omeda.arc:v1.0.0 (by /u/ArcLauncherApp)';
+  static const String userAgent = 'android:tv.polya.app:v1.0.0 (PolyaTV)';
   static const String rssUserAgent = 'Feedly/1.0 (+http://www.feedly.com/fetcher.html; like FeedFetcher-Google)';
   static const String browserUserAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';

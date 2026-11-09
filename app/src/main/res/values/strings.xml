@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">PolyaTV</string>
-    <string name="search_hint">Фильмы и сериалы в PolyaTV</string>
-    <string name="search_settings_description">Поиск по медиатеке PolyaTV и TorrServe</string>
-</resources>

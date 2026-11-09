@@ -6,9 +6,9 @@
 PolyaTV is developed in its own repository. CleanMyTV2 is not the application base. Any reuse requires separate license, compatibility and security review.
 
 ## ADR-002: Arc Launcher as application base
-**Status:** Accepted; implementation belongs to the foundation stage
+**Status:** Accepted; applied in `work/android-foundation`
 
-Use [Arc Launcher](https://github.com/meddouribadis/arclauncher/) as the Flutter/Dart base, preserving upstream history and GPL-3.0 license. Record Arc/its LTvLauncher and FLauncher lineage in README and notices when the fork is made. Keep new integrations in separate modules to ease upstream updates. This decision replaces the previous proposed Kotlin/Compose-from-scratch direction; the fork has not been completed by the stage 0 audit.
+Use [Arc Launcher](https://github.com/meddouribadis/arclauncher/) as the Flutter/Dart base, preserving its upstream history and GPL-3.0 license. Its LTvLauncher and FLauncher lineage is recorded in README and the upstream license/header files remain intact. Keep new integrations in separate modules to ease upstream updates. This replaces the earlier Kotlin/Compose-from-scratch direction.
 
 ## ADR-003: Do not auto-start playback from PolyaTV
 **Status:** Accepted

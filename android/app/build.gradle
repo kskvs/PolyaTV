@@ -64,7 +64,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.omeda.arc"
+        applicationId "tv.polya.app"
         compileSdk 36
         minSdkVersion flutter.minSdkVersion
         targetSdk 35
@@ -136,9 +136,9 @@ android {
         variant.outputs.all { output ->
             def abi = output.getFilter(com.android.build.OutputFile.ABI)
             if (abi != null) {
-                outputFileName = "arc-launcher-${abi}-${variant.buildType.name}.apk"
+                outputFileName = "polya-tv-${abi}-${variant.buildType.name}.apk"
             } else {
-                outputFileName = "arc-launcher-universal-${variant.buildType.name}.apk"
+                outputFileName = "polya-tv-universal-${variant.buildType.name}.apk"
             }
         }
     }

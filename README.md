@@ -22,10 +22,10 @@ Arc предоставляет базовый Android TV домашний экр
 flutter pub get
 flutter analyze
 flutter test
-flutter build apk --debug
+flutter build apk --debug --flavor github
 ```
 
-Сборка debug APK: `build/app/outputs/flutter-apk/app-debug.apk`.
+Debug сборка имеет package ID `tv.polya.app.debug`, поэтому её можно тестировать отдельно от установленной версии `tv.polya.app`. APK: `build/app/outputs/flutter-apk/polya-tv-universal-debug.apk`. Release package ID — `tv.polya.app`.
 
 ## Проектные документы
 

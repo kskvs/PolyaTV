@@ -20,18 +20,20 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Reuse debug signing key
-        uses: actions/cache@v4
+      - uses: subosito/flutter-action@v2
         with:
-          path: ~/.android/debug.keystore
-          key: polya-debug-signing-v1
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze Dart sources
+        run: flutter analyze
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest
+        run: flutter test
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: flutter build apk --debug --flavor github
       - uses: actions/upload-artifact@v4
         with:
           name: PolyaTV-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: build/app/outputs/flutter-apk/polya-tv-universal-debug.apk
           if-no-files-found: error

@@ -22,8 +22,8 @@ This project and everyone participating in it is governed by our [Code of Conduc
 
 2. **Clone the repository**:
    ```bash
-   git clone https://github.com/meddouribadis/arclauncher.git
-   cd arclauncher
+   git clone https://github.com/kskvs/PolyaTV.git
+   cd PolyaTV
    ```
 
 3. **Install dependencies**:
