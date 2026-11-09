@@ -80,7 +80,8 @@ class BrightnessSettingsPage extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: SelectableText(
-                                  'adb shell appops set tv.polya.app.debug WRITE_SETTINGS allow', // Debug build package; release uses tv.polya.app
+                                  'adb shell appops set tv.polya.app.debug WRITE_SETTINGS allow  # debug\n'
+                                  'adb shell appops set tv.polya.app WRITE_SETTINGS allow        # release',
                                   style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                                 ),
                               ),
