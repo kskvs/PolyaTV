@@ -1,56 +1,76 @@
-# Интеграции и воспроизведение
+# Интеграции: результаты этапа 0
 
-## TorrServe
-TorrServe — основной playback target. Его адаптер изолирован собственным контрактом.
+Дата проверки: 2026-11-09. Это аудит исходников, а не испытание на телевизоре. Установленные версии приложений и реальный TorrServe endpoint недоступны; выводы ниже помечены по уровню проверки.
 
-**Критическое правило:** передавать запуск в штатный TorrServe MatriX через `action=play`. MatriX сам выбирает поведение: один playable-файл запускается сразу, несколько файлов открывают штатный список файлов/серий. Не показывать промежуточное меню PolyaTV и не вызывать принудительный `action=choose`.
+## Краткий вывод
 
-До production-кода проверить:
-- фактические HTTP API и ответы;
-- различия версий MatriX;
-- поведение запуска для single-file и multi-file торрентов;
-- формат ID и launch reference от Lampa/NUM;
-- доступность истории и прогресса;
-- поведение при недоступном TorrServe.
+| Источник | Получить элементы | Открыть выбор файла/серии TorrServe напрямую | Статус |
+|---|---|---|---|
+| TorrServe MatriX | Да: официальный клиент использует API списка, просмотренных и поиска торрентов | Нет подтверждённого безопасного внешнего режима, который гарантирует экран выбора файлов и не запускает одиночный файл | Частично |
+| Lampa | Да: экспортированный Android TV SearchProvider возвращает результаты каталожного поиска с ID, типом, описанием и постером | Нет: результат открывает Lampa, а не TorrServe chooser; torrent hash в выдаче отсутствует | Частично |
+| NUM | Не подтверждено: публичный стабильный интерфейс выдачи NUM не найден. Android TV system recommendations — возможный путь, но публикация NUM и пригодность строк не проверены | Нет подтверждённого прямого hand-off в TorrServe | Пока невозможно подтвердить |
 
-Собрать fixtures и контрактные тесты. Не выводить API из имён методов или предположений.
+Критерий исследования выполнен честным отрицательным результатом там, где общего сценария «витрина → нативный выбор файла MatriX без автозапуска» источники не подтверждают. До интерфейса этапа 3 нужно выбрать один из безопасных обходных вариантов после проверки на устройстве; нельзя выдавать вызов `action=play` за chooser.
 
-## Lampa search
+## TorrServe MatriX
 
-Lampa's exported Android TV search provider is queried through `content://top.rootu.lampa.atvsearch/search/search_suggest_query`. Its rows contain TMDB ID, media type, title, description and artwork URL. Selecting a result opens Lampa's exported `top.rootu.lampa.MainActivity` with action `GLOBALSEARCH`, the TMDB ID and `movie/tv` type. No private Lampa database is read. This is a catalogue hand-off; the final torrent selection remains in Lampa and then uses the normal TorrServe hand-off.
+### Что подтверждено исходниками
 
-## MatriX search
+В официальном Android-клиенте TorrServe, исходники на коммите `3cb028c`:
 
-MatriX.134 client uses GET `/search?query=...` and returns tracker results with title, magnet link, info hash, year, size, tracker and seed count. PolyaTV displays those matches without adding them to the server. Only after explicit user selection does it POST `/torrents` with action `add` and the chosen magnet, then starts the returned torrent through the native MatriX `action=play` path. This avoids silently adding every search result.
+- `POST /torrents` с `{"action":"list"}` возвращает текущие торренты; `POST /viewed` поддерживает чтение просмотренных файлов; клиент также вызывает `GET /search?query=...`. Это контракт клиента, а не проверка конкретного работающего сервера.
+- В экспортируемой `PlayActivity` параметр `action=play` вызывает `play(false)` и пропускает `ChooserFragment`.
+- В `Play.play` один playable-файл запускается сразу. Несколько файлов открывают `TorrentFilesFragment`; пользователь выбирает файл/эпизод там.
+- `action=choose` принудительно показывает `ChooserFragment`, но это меню действий «играть / добавить и играть / добавить», а не список файлов. Кроме того, настройки MatriX могут автоматически пропустить это меню.
+- Публичная API-схема для прямого открытия `TorrentFilesFragment` или режима «только показать файлы, никогда не начинать воспроизведение» в проверенных исходниках не обнаружена. Это означает «не подтверждено», а не доказательство, что никакой версии/форка такого интерфейса не существует.
 
-## Lampa и NUM
-Каждый источник имеет независимый адаптер для discovery/search, карточек, метаданных/изображений и launch reference. Не предполагать одинаковые API или полноту данных. Сохранять исходный launch payload безопасно; не показывать и не писать чувствительные данные в логи.
+Исходники: [Api.kt](https://github.com/YouROK/TorrServe/blob/3cb028c/app/src/main/java/ru/yourok/torrserve/server/api/Api.kt), [PlayActivity.kt](https://github.com/YouROK/TorrServe/blob/3cb028c/app/src/main/java/ru/yourok/torrserve/ui/activities/play/PlayActivity.kt), [Play.kt](https://github.com/YouROK/TorrServe/blob/3cb028c/app/src/main/java/ru/yourok/torrserve/ui/activities/play/Play.kt), [ChooserFragment.kt](https://github.com/YouROK/TorrServe/blob/3cb028c/app/src/main/java/ru/yourok/torrserve/ui/fragments/play/ChooserFragment.kt), [TorrentFilesFragment.kt](https://github.com/YouROK/TorrServe/blob/3cb028c/app/src/main/java/ru/yourok/torrserve/ui/fragments/play/TorrentFilesFragment.kt).
 
-### Подтверждённые внешние интерфейсы и ограничения
+### Решение
 
-- Официальный Android-клиент LAMPA (application ID `top.rootu.lampa`) публикует экспортированный поисковый ContentProvider `top.rootu.lampa.atvsearch`. Адаптер PolyaTV запрашивает его через Android ContentResolver и получает TMDB-сущности. Выбор результата передаётся в Lampa как `GLOBALSEARCH` с TMDB ID и типом `movie/tv`. Это открывает карточку внутри Lampa, но **не выдаёт torrent hash и не открывает TorrServe chooser напрямую**: пользователь продолжает штатный сценарий Lampa, который может передать выбранный torrent в TorrServe.
-- NUM (пакет, указанный в публичной теме приложения: `ru.yourok.num`) описывается как Android TV приложение с каналами/рекомендациями и системным голосовым поиском. Публичный стабильный контракт прямого чтения его результатов PolyaTV пока не подтверждён. Не читать его приватную БД и не считать внутренние компоненты API без проверки на устройстве.
+**Возможно:** каталогизировать сохранённые на сервере торренты и искать торренты через API, когда в PolyaTV есть проверенный адрес и доступ. Ответы живого сервера, auth, версия и формат карточек на устройстве пока не проверены.
 
-Перед включением любого адаптера определить установленный вариант приложения, проверить exported provider/activity и проверить полный путь до запуска MatriX 134 на реальном ТВ.
+**Частично:** для multi-file торрента `action=play` приводит к нативному списку файлов. Для single-file он запускает воспроизведение сразу, что нарушает требование PolyaTV не запускать напрямую. `action=choose` — не требуемый picker.
 
+**Обходной путь до подтверждённого API:** передавать пользователя в Lampa/NUM и позволить этому приложению выполнить его обычный сценарий, либо открывать в TorrServe только список торрентов без автозапуска и дать выбрать там. Второй вариант меняет целевой сценарий и требует проверки внешней активности/ссылки. Не делать ни один вариантом «выбрал фильм → гарантированно открылся file chooser» без теста на установленной версии.
 
-## NUM Android TV recommendations
+**История:** API клиента имеет `/viewed` для отмеченных файлов в торренте. Это не подтверждает единый прогресс фильма, историю Lampa/NUM или точную позицию воспроизведения.
 
-The NUM adapter uses Android's public TV Provider contract, not NUM's private files or database. It requests the dangerous runtime permission `android.permission.READ_TV_LISTINGS` only after the user chooses “Разрешить доступ к рекомендациям NUM” in PolyaTV settings. It queries `TvContract.PreviewPrograms` without a SQL selection, then filters rows by owning package `ru.yourok.num` and `COLUMN_SEARCHABLE=1`. Each row is accepted only when its `intent_uri` resolves back to the NUM package; selecting a result launches that published intent. Relative or private poster URIs are not copied into the external UI.
+## Lampa
 
-This adapter is **capability-based**: if NUM does not publish searchable preview-program rows, the adapter correctly returns no results. Its real presence and result count on Philips 50PUS8057/60 still needs device testing. Android restricts third-party reads to searchable rows and the permission; the signature/privileged all-EPG permission is not requested.
+### Проверено по публичному исходному коду Android-клиента
 
-## Unified feed
-Дедуплицировать произведения, сохраняя все найденные источники; выбирать метаданные и изображения по правилам качества; оставлять возможность открыть элемент через нужный источник; переживать частичный отказ адаптеров.
+В репозитории [lampa-app/LAMPA](https://github.com/lampa-app/LAMPA) поисковый provider объявляет authority `top.rootu.lampa.atvsearch`; searchable XML настраивает `content://top.rootu.lampa.atvsearch/video/search/search_suggest_query` и selection ` ? `. `SearchProvider.query` берёт текст из `selectionArgs[0]`, вызывает внутреннюю команду либо поиск. `SearchDatabase` ищет TMDB-фильмы и сериалы, формирует строки с ID, названием, описанием, постером, типом и действием `GLOBALSEARCH`. Это именно выдача каталожного поиска, не полный список каталога и не персональная лента.
 
-## Постеры и metadata providers
-Для TMDB, Kinopoisk и альтернатив проверить официальные API, русский язык, качество изображений, attribution, права локального кэширования и лимиты. Провайдер подключается только после технической и лицензионной проверки.
+Источники: [SearchProvider.kt](https://github.com/lampa-app/LAMPA/blob/main/app/src/main/java/top/rootu/lampa/search/SearchProvider.kt), [SearchDatabase.kt](https://github.com/lampa-app/LAMPA/blob/main/app/src/main/java/top/rootu/lampa/search/SearchDatabase.kt), [searchable.xml](https://github.com/lampa-app/LAMPA/blob/main/app/src/main/res/xml/searchable.xml).
 
-## Android TV system search
+### Решение
 
-PolyaTV declares its own searchable ContentProvider and `searchable.xml`. The provider returns only the cached TorrServe catalog (no network requests while the system search dialog is typing). Selecting a result hands playback to the native MatriX `action=play` path. Submitting a search query without selecting a suggestion opens PolyaTV's in-app search screen.
+**Возможно, с условиями:** на устройстве, где установлен совместимый официальный Lampa-клиент и разрешён доступ к его exported provider, PolyaTV может запросить подсказки поиска. Совместимость подписи/пакета, наличие provider на конкретном ТВ и фактическое изображение нужно проверить на устройстве. Поиск выполняется самим Lampa и его TMDB-конфигурацией.
 
-The Android TV framework can query third-party searchable providers, but the TV manufacturer's launcher controls whether it displays those results and how its physical Search key is routed. This integration does not replace the system search UI or guarantee that a Philips firmware build includes third-party suggestions.
+**Частично:** выбор строки может передать TMDB ID и `movie/tv` в Lampa через `GLOBALSEARCH`. Публичная выдача не содержит torrent hash/magnet и не открывает TorrServe picker. Публичного стабильного API полной Lampa-ленты/истории для стороннего лаунчера в рассмотренном коде не найдено. Внутренние данные Lampa не читать.
 
-## История playback
-Исследовать отдельно: TorrServe API/данные сервера; Android MediaSession/PlaybackState и notification access; события запуска/возврата Lampa/NUM. Сквозной точный прогресс нельзя обещать без реального источника данных. Сопоставление контента делать по нескольким идентификаторам и confidence score.
+**Обходной путь:** открыть выбранный результат в Lampa и продолжить штатный сценарий Lampa. Это hand-off в приложение-источник, не прямой сценарий PolyaTV → TorrServe.
+
+## NUM
+
+### Проверено и не проверено
+
+Публичного исходного кода NUM или документированного стабильного внешнего каталожного API в проверенных источниках не найдено. Внутренние базы/компоненты NUM нельзя считать контрактом.
+
+Android TV поддерживает searchable apps и system TV recommendations; системные механизмы позволяют приложениям публиковать собственные рекомендации и действия. Это подтверждает возможность платформенного способа интеграции, но не доказывает, что конкретная версия NUM на Philips публикует записи, которые PolyaTV может читать и открывать. Не считать гипотезу о `TvContract.PreviewPrograms`, package-фильтрации или разрешении `READ_TV_LISTINGS` подтверждённой для NUM.
+
+### Решение
+
+**Пока невозможно подтвердить:** список карточек NUM, постеры/метаданные и внешние launch references без установленного NUM и проверки на устройстве. Результаты Android TV system search/recommendations — **гипотеза**, не готовый адаптер. Прямой hand-off из PolyaTV в TorrServe chooser не подтверждён.
+
+**Обходной путь:** проверить на ТВ, можно ли открыть карточку/приложение NUM из его системной рекомендации и выполнить обычный сценарий NUM. Для интеграции в витрину нужны наблюдение за опубликованными TV Provider строками и intent на целевой версии Android либо документация/разрешение разработчика NUM. Не читать приватные файлы приложения.
+
+## Что нужно для следующей проверки
+
+1. Версия Android/прошивки Philips 50PUS8057/60 и доступный ADB-сеанс на ТВ.
+2. Название/версия установленного MatriX, адрес сервера (и наличие авторизации) — без пароля в документах/логах.
+3. Установленные варианты Lampa и NUM, чтобы проверить package/provider/activity и реальные результаты.
+4. Отдельное решение по продуктовой развилке: допустим ли временный переход в Lampa/NUM или список TorrServe. Ни один вариант не равнозначен требуемому прямому MatriX file chooser.
+
+До этой проверки не писать адаптеры по предположению и не объявлять сценарий «витрина → chooser» реализованным.
