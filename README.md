@@ -1,25 +1,37 @@
 # PolyaTV
 
-Самостоятельный Android TV launcher и медиахаб с единым кинотеатральным интерфейсом.
+PolyaTV развивается как Android TV лаунчер с единой кинотеатральной витриной. На текущем этапе в качестве основы используется Arc Launcher; интеграции TorrServe, Lampa и NUM ещё проходят техническую проверку и не должны считаться готовыми только потому, что лаунчерная основа уже работает.
 
-Проект создаётся с нуля. CleanMyTV2 используется только как источник технических идей и проверенных протоколов; его UI и архитектура не являются основой PolyaTV.
+## Основа и лицензия
 
-## Цели
-- Кинотеатральный главный экран: hero-баннер и горизонтальные ряды постеров.
-- Единая витрина TorrServe, Lampa и NUM.
-- При выборе фильма/сериала открывать штатный chooser TorrServe MatriX для выбора файла или серии. Не запускать воспроизведение напрямую и не вставлять свой экран деталей.
-- История и продолжение просмотра — в пределах реально доступных playback-данных.
-- Глобальный поиск, расширенная настройка секций и интерфейса.
-- Плавная D-pad-навигация без дрожания и потери фокуса.
-- Отдельный Windows Companion.
+Приложение основано на [Arc Launcher](https://github.com/meddouribadis/arclauncher/), форке [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher/), который восходит к [FLauncher](https://gitlab.com/flauncher/flauncher). История Arc сохранена в Git и объединена с историей PolyaTV отдельным merge-коммитом. Файл [LICENSE](LICENSE) содержит GNU GPL v3; изменения и распространяемые сборки должны соблюдать условия лицензии. Авторские заголовки исходников сохранены.
 
-## Документы
-- [Product requirements](docs/PRODUCT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Integrations and playback](docs/INTEGRATIONS.md)
-- [UX and navigation](docs/UX.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Decisions](docs/DECISIONS.md)
+Новые интеграции PolyaTV следует держать в отдельных модулях, чтобы поддерживать обновления Arc. Документы о продукте, архитектуре и проверке источников находятся в [docs/](docs/).
 
-## Статус
-Этап архитектурного проектирования и технической проверки интеграций.
+## Текущее состояние
+
+Arc предоставляет базовый Android TV домашний экран, сетку приложений, категории, навигацию пультом, настройки, обои и Watch Next. Конкретные версии приложения и поведение на Philips 50PUS8057/60 ещё требуют проверки после сборки PolyaTV.
+
+Интеграции медиакаталогов не завершены. В частности, прямой запуск нативного выбора файла TorrServe MatriX без риска автозапуска одного файла не подтверждён. Проверенные факты и ограничения записаны в [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+
+## Сборка и проверки
+
+Текущий источник фиксирует Flutter 3.41.9 и Dart 3.11 в `.fvmrc` и `pubspec.yaml`. Установите соответствующую версию Flutter и Android SDK, затем выполните из корня репозитория:
+
+```powershell
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --debug --flavor github
+```
+
+Debug сборка имеет package ID `tv.polya.app.debug`, поэтому её можно тестировать отдельно от установленной версии `tv.polya.app`. APK: `build/app/outputs/flutter-apk/polya-tv-universal-debug.apk`. Release package ID — `tv.polya.app`.
+
+## Проектные документы
+
+- [PRODUCT](docs/PRODUCT.md)
+- [ARCHITECTURE](docs/ARCHITECTURE.md)
+- [INTEGRATIONS](docs/INTEGRATIONS.md)
+- [UX](docs/UX.md)
+- [ROADMAP](docs/ROADMAP.md)
+- [DECISIONS](docs/DECISIONS.md)

@@ -1,53 +1,42 @@
 # Архитектура PolyaTV
 
+## Основа
+
+PolyaTV наследует Android TV launcher shell из [Arc Launcher](https://github.com/meddouribadis/arclauncher/). Git history Arc и прежняя история PolyaTV соединены merge-коммитом; авторские заголовки, LICENSE GPL-3.0, Flutter и Android-модули Arc сохранены. Основа — Flutter/Dart, а не Kotlin/Compose.
+
+Обновления upstream должны приходить отдельными проверяемыми merge/cherry-pick операциями. Не переписывать или заменять историю Arc. Новые интеграции изолировать от launcher shell и связывать с ним через стабильные модели и интерфейсы.
+
+## Текущие границы
+
+```text
+Flutter launcher shell (Arc)
+  ├── приложения, категории и настройки
+  ├── навигация D-pad и восстановление фокуса
+  ├── обои и screensaver
+  └── Watch Next (основная первая поверхность витрины; Android TV provider + подтверждённые source adapters)
+
+Будущие PolyaTV модули
+  ├── TorrServe discovery/API и проверенный launch bridge
+  ├── Lampa каталог/search-provider bridge
+  ├── NUM bridge только после проверки публичного контракта
+  └── единая витрина и поиск
+```
+
+Arc Watch Next используется как основная первая поверхность витрины и сохраняет существующие D-pad focus/hero/карточки. Его текущая выборка из Android TV `TvProvider` — лишь один источник данных. TorrServe, Lampa и NUM подключаются отдельными адаптерами к той же presentation-модели только после проверки контрактов в [INTEGRATIONS.md](INTEGRATIONS.md); не подменять неизвестный контракт имитацией карточек.
+
 ## Принципы
-1. Отдельный проект; CleanMyTV2 не является базой приложения.
-2. Разделение UI, доменной модели, хранилища и адаптеров источников.
-3. Android TV UI на Kotlin + Jetpack Compose for TV.
-4. Сеть и интеграционная логика не размещаются в composable.
-5. Контракты адаптеров тестируются отдельно.
-6. Не плодить Gradle-модули формально: важны чёткие API и границы ответственности.
 
-## Предлагаемая структура
-```
-PolyaTV/
-├── app/                       # Android application, DI, entry point
-├── core/
-│   ├── model/                 # Доменные модели
-│   ├── database/              # Локальное хранилище и миграции
-│   ├── network/               # HTTP, serialization, retry policies
-│   ├── designsystem/          # TV-компоненты и темы
-│   └── navigation/            # Навигация и focus management
-├── feature/
-│   ├── home/
-│   ├── search/
-│   ├── library/
-│   ├── history/
-│   ├── apps/
-│   └── settings/
-├── integration/
-│   ├── torrserve/
-│   ├── lampa/
-│   └── num/
-├── docs/
-└── windows-companion/         # Возможно, отдельный репозиторий
-```
+1. Сохранять исходную launcher-навигацию Arc и её D-pad focus behavior.
+2. Источники не разделяют идентификаторы и launch payload без нормализации и provenance.
+3. Сетевые операции не выполнять в build-методах Flutter widgets; использовать отдельные service/provider слои.
+4. Витрина не удаляет last-known-good данные после временного пустого/ошибочного ответа.
+5. Не запускать playback напрямую из PolyaTV: целевой flow — штатный выбор файла/серии MatriX, пока его безопасный внешний контракт не подтверждён.
+6. Не декларировать незапрошенные runtime permissions; запрашивать их непосредственно перед понятным пользователю действием.
 
-## Потоки данных
-Источники -> адаптеры -> нормализованные ContentItem -> repository/use cases -> ViewModel -> Compose UI.
+## Планируемые data contracts
 
-Запуск: UI action -> LaunchContent use case -> TorrServe adapter/intent bridge -> штатный TorrServe chooser.
+Нормализованный элемент витрины должен хранить canonical ID, title/original title, тип (movie/series/episode), год, poster/backdrop URLs с provenance и несколько source references. Source reference содержит source ID, идентификатор источника и подтверждённый launch payload; его нельзя подменять торрент hash по названию или TMDB ID.
 
-История: playback/session/source events -> History repository -> локальная БД -> Home/History.
+## Проверки
 
-## Модель контента
-Минимальные поля: canonicalId, title, originalTitle, contentType (MOVIE/SERIES/EPISODE/UNKNOWN), year, rating, poster/backdrop candidates, sourceItems (sourceId, sourceContentId, launch reference), metadata provenance, updatedAt. Не использовать название или URL как единственный ключ дедупликации.
-
-## Хранение
-Настройки и порядок секций, кэш нормализованных карточек, mapping идентификаторов, история и доступный прогресс, sync state и timestamp последнего успешного обновления. Кэш и пользовательские настройки имеют разные правила очистки.
-
-## Надёжность
-Изолированные таймауты/retry, backoff, last-known-good snapshot. Не очищать содержимое из-за пустого/ошибочного ответа. Атомарно заменять snapshot после успешной загрузки. Логировать структурированно, маскировать токены и приватные URL.
-
-## Тестирование
-Unit-тесты нормализации, дедупликации, кэша, сортировки и восстановления фокуса. Интеграционные тесты TorrServe chooser/API выполнять с реальным сервисом и на целевом устройстве.
+Для изменений shell запускать `flutter analyze`, `flutter test` и `flutter build apk --debug`. На каждом этапе проверить D-pad focus, back navigation и восстановление фокуса после возврата из стороннего приложения. Физическая проверка выполняется на Philips 50PUS8057/60; её результат отмечать отдельно от эмулятора.
