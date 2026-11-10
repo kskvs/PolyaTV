@@ -29,3 +29,8 @@ Windows Companion has its own lifecycle and release process. It starts only afte
 **Status:** Accepted
 
 Mark integration facts as verified only when backed by primary documentation/source or a reproducible request/app test. Label untested device behavior as a hypothesis. Do not infer a NUM API from Android TV capabilities or a TorrServe chooser from an Activity being exported. When the needed data or launch contract is unavailable, document the limitation and an honest fallback before implementation.
+
+## ADR-007: Stage 0 completion is based on source audit, not device validation
+**Status:** Accepted
+
+The Stage 0 research gate is satisfied by documenting, for TorrServe, Lampa, and NUM, either a substantiated external data/launch path or an explicit unverified/unavailable result with a practical alternative. This does not mean the installed apps, server endpoint, history, or launch behavior were tested on Philips. Those device-specific checks remain prerequisites for claiming an integration works. Do not begin a storefront integration on the assumption that an unverified MatriX chooser or NUM interface exists.
