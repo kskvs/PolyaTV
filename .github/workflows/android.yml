@@ -36,5 +36,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: PolyaTV-debug
-          path: build/app/outputs/flutter-apk/polya-tv-universal-debug.apk
+          path: build/app/outputs/flutter-apk/app-github-debug.apk
           if-no-files-found: error
