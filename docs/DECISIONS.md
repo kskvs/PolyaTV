@@ -34,3 +34,8 @@ Mark integration facts as verified only when backed by primary documentation/sou
 **Status:** Accepted
 
 The Stage 0 research gate is satisfied by documenting, for TorrServe, Lampa, and NUM, either a substantiated external data/launch path or an explicit unverified/unavailable result with a practical alternative. This does not mean the installed apps, server endpoint, history, or launch behavior were tested on Philips. Those device-specific checks remain prerequisites for claiming an integration works. Do not begin a storefront integration on the assumption that an unverified MatriX chooser or NUM interface exists.
+
+## ADR-008: Arc Watch Next is the first PolyaTV storefront surface
+**Status:** Accepted
+
+Build on Arc's existing Watch Next presentation and D-pad focus model. Treat it as PolyaTV's primary first storefront row while keeping its current Android TV `TvProvider` ingestion as one source. Add TorrServe, Lampa and NUM through isolated adapters only after validating each source's listing data and launch behavior on the target device. Exclude YouTube TV and Kinopoisk from the row on first run because the product owner explicitly does not want them; keep them available through the existing app filter. This does not alter what those apps publish to Android TV's system-managed Watch Next channel.

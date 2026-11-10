@@ -49,6 +49,10 @@ const String _watchNextBigPictureMode = "watch_next_big_picture_mode";
 const String _watchNextHideProgramsWithoutImages = "watch_next_hide_programs_without_images";
 const String _watchNextMaxItems = "watch_next_max_items";
 const String _watchNextExcludedPackages = "watch_next_excluded_packages";
+const List<String> _defaultWatchNextExcludedPackages = [
+  "com.google.android.youtube.tv",
+  "ru.kinopoisk.tv",
+];
 
 const List<int> WATCH_NEXT_MAX_ITEMS_OPTIONS = [0, 5, 10, 15, 20, 25, 30, 50];
 const String _dockDarkBackground = "dock_dark_background";
@@ -271,7 +275,8 @@ class SettingsService extends ChangeNotifier {
   }
 
   List<String> get watchNextExcludedPackages =>
-      _sharedPreferences.getStringList(_watchNextExcludedPackages) ?? const [];
+      _sharedPreferences.getStringList(_watchNextExcludedPackages) ??
+      _defaultWatchNextExcludedPackages;
 
   Future<void> setWatchNextExcludedPackages(List<String> packages) async {
     await _sharedPreferences.setStringList(_watchNextExcludedPackages, packages);

@@ -25,7 +25,10 @@ class FLauncherChannel {
   static const _appsEventChannel = EventChannel('me.efesser.flauncher/event_apps');
   static const _networkEventChannel = EventChannel('me.efesser.flauncher/event_network');
 
-  static const _watchNextMaxItems = 50;
+  // The TV provider can contain many more programs than the home row displays.
+  // Fetch enough rows for package filtering and source inspection; the user-facing
+  // maximum is applied later by WatchNextService.
+  static const _watchNextMaxItems = 200;
 
   Future<List<Map<dynamic, dynamic>>> getApplications() async {
     List<Map<dynamic, dynamic>>? applications = await _methodChannel.invokeListMethod("getApplications");

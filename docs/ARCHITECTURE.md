@@ -13,7 +13,7 @@ Flutter launcher shell (Arc)
   ├── приложения, категории и настройки
   ├── навигация D-pad и восстановление фокуса
   ├── обои и screensaver
-  └── Watch Next (только данные, которые публикуют Android TV приложения)
+  └── Watch Next (основная первая поверхность витрины; Android TV provider + подтверждённые source adapters)
 
 Будущие PolyaTV модули
   ├── TorrServe discovery/API и проверенный launch bridge
@@ -22,7 +22,7 @@ Flutter launcher shell (Arc)
   └── единая витрина и поиск
 ```
 
-Интеграции не считаются реализованными в Arc shell. Отдельные adapters, storage/cache и UI-представления должны быть добавлены в последующих этапах, после проверки контрактов в [INTEGRATIONS.md](INTEGRATIONS.md).
+Arc Watch Next используется как основная первая поверхность витрины и сохраняет существующие D-pad focus/hero/карточки. Его текущая выборка из Android TV `TvProvider` — лишь один источник данных. TorrServe, Lampa и NUM подключаются отдельными адаптерами к той же presentation-модели только после проверки контрактов в [INTEGRATIONS.md](INTEGRATIONS.md); не подменять неизвестный контракт имитацией карточек.
 
 ## Принципы
 
