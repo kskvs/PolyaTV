@@ -17,12 +17,12 @@
 
 ## Этап 1 — Основа приложения
 
-Рабочая основа — Arc Launcher (Flutter/Dart, происхождение LTvLauncher/FLauncher). История Arc влита отдельным merge-коммитом и GPL-3.0 сохранена. Переименование продукта и package ID выполнено. Этап не пройден: в текущей рабочей среде отсутствуют Flutter и JDK, а ADB показывает Philips как `offline`; локальная сборка и запуск пока не подтверждены.
+Рабочая основа — Arc Launcher (Flutter/Dart, происхождение LTvLauncher/FLauncher). История Arc влита отдельным merge-коммитом и GPL-3.0 сохранена. Переименование продукта и release applicationId выполнено. GitHub Actions run 108 на коммите `fb92a29` успешно выполнил `flutter analyze`, `flutter test`, сборку debug APK и загрузку артефакта. Анализатор по-прежнему завершает работу с ошибкой при error-level diagnostics; имеющиеся Arc info/warnings выводятся, но не блокируют CI. Этап не пройден: запуск на Android TV эмуляторе и Philips, D-pad и возврат из стороннего приложения не проверены. Локальные Flutter/JDK отсутствуют; попытка ADB-подключения к Philips не получила ответа.
 
 - [x] Перенести Arc в PolyaTV, сохранив историю и LICENSE.
 - [x] Указать происхождение и GPL-3.0 в README и документации.
 - [x] Переименовать отображаемое приложение и release applicationId на PolyaTV / `tv.polya.app`.
-- [ ] Запустить `flutter analyze`, `flutter test` и собрать debug APK.
+- [x] В CI запустить `flutter analyze`, `flutter test` и собрать debug APK.
 - [ ] Проверить запуск на Android TV эмуляторе и Philips.
 - [ ] Проверить D-pad фокус/возврат и базовые настройки.
 
