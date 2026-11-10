@@ -145,6 +145,9 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     settingsService = SettingsService(prefs);
+    // These widget tests cover explicit filtering choices; keep default-hidden
+    // providers out of this fixture's package list.
+    await settingsService.setWatchNextExcludedPackages([]);
     await settingsService.setShowWatchNextSection(true);
 
     watchNextService = MockWatchNextServiceForPanel();
