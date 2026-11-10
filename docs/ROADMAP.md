@@ -17,14 +17,20 @@
 
 ## Этап 1 — Основа приложения
 
-Рабочая основа — Arc Launcher (Flutter/Dart, происхождение LTvLauncher/FLauncher). История Arc влита отдельным merge-коммитом и GPL-3.0 сохранена. Переименование продукта и release applicationId выполнено. GitHub Actions run 108 на коммите `fb92a29` успешно выполнил `flutter analyze`, `flutter test`, сборку debug APK и загрузку артефакта. Анализатор по-прежнему завершает работу с ошибкой при error-level diagnostics; имеющиеся Arc info/warnings выводятся, но не блокируют CI. Этап не пройден: запуск на Android TV эмуляторе и Philips, D-pad и возврат из стороннего приложения не проверены. Локальные Flutter/JDK отсутствуют; попытка ADB-подключения к Philips не получила ответа.
+Рабочая основа — Arc Launcher (Flutter/Dart, происхождение LTvLauncher/FLauncher). История Arc влита отдельным merge-коммитом и GPL-3.0 сохранена. Переименование продукта и release applicationId выполнено. GitHub Actions run 110 на коммите `36959e0` успешно выполнил `flutter analyze`, `flutter test`, сборку debug APK и загрузку артефакта. Анализатор завершает работу с ошибкой при error-level diagnostics; существующие Arc info/warnings выводятся, но не блокируют CI.
+
+Физическая проверка 2026-11-10 на Philips 50PUS8057/60 (Android 11, API 30): debug APK `tv.polya.app.debug` установлен и запущен; Activity осталась активной. Проверены D-pad вправо/влево/вниз, распознавание HOME intent и восстановление фокуса на карточке после выхода из системных настроек. В журнале после запуска нет `FATAL EXCEPTION`. Google TV Launcher имеет больший приоритет для HOME; выбор PolyaTV основным лаунчером не менялся.
+
+**Этап не завершён:** Android TV эмулятор и настройки самого PolyaTV ещё не проверены. Локальные Flutter/JDK отсутствуют.
 
 - [x] Перенести Arc в PolyaTV, сохранив историю и LICENSE.
 - [x] Указать происхождение и GPL-3.0 в README и документации.
 - [x] Переименовать отображаемое приложение и release applicationId на PolyaTV / `tv.polya.app`.
 - [x] В CI запустить `flutter analyze`, `flutter test` и собрать debug APK.
-- [ ] Проверить запуск на Android TV эмуляторе и Philips.
-- [ ] Проверить D-pad фокус/возврат и базовые настройки.
+- [x] Установить и запустить debug APK на Philips 50PUS8057/60.
+- [x] Проверить D-pad перемещение и возврат фокуса после системных настроек.
+- [ ] Проверить запуск на Android TV эмуляторе.
+- [ ] Проверить настройки самого PolyaTV на устройстве.
 
 ## Этап 2 — Минимальный прототип витрины
 
